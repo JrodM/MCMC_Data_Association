@@ -1,0 +1,15 @@
+all: test
+
+CFLAGS=-fPIC -g3 -O0 -Wall `pkg-config --cflags opencv` -std=c++11 -fpermissive
+LIBS = `pkg-config --libs opencv`
+INCLUDE = -I/usr/local/include/libfreenect -I/usr/include/libusb-1.0
+FREE_LIBS = -L/usr/local/lib -lfreenect -lpthread -lopencv_core -lopencv_imgproc -lopencv_highgui -lopencv_objdetect -lgloox
+
+test:  *.cpp *.h CASAS/lib/clib/*.cpp CASAS/lib/clib/*.h
+	g++ $(INCLUDE) $(CFLAGS) $? -o $@  $(LIBS) $(FREE_LIBS)
+
+%.o: %.cpp
+	g++ -c $(CFLAGS) $< -o $@
+
+clean:
+	rm -rf *.o test
