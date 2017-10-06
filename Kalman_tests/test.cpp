@@ -90,24 +90,26 @@ while(1)
  // Get mouse point
          px =  mousePos.x ;
     py = mousePos.y;
-
+    
+    measurement(0) = px;
+    measurement(1) = py;
+    
       Mat_<float> noise(2,1); noise.setTo(Scalar(0));
       randn(noise,Scalar::all(0),Scalar(5));
       
-      measurement(0) = px;
-     
-      measurement(1) = py;
-      
-      measurement = measurement + noise;
+      measurement = measurement + noise ;
       
  // The update phase 
  Mat B = (KF.measurementMatrix*KF.errorCovPre* KF.measurementMatrix.t()+KF.measurementNoiseCov);
- measurement2(0) = prediction.at<float>(0);
-  measurement2(1) = prediction.at<float>(1);
-randn(me,measurement2,B);
- cout<<me<<endl;
+  
+ cout << "MAT B"<< B <<endl;
+ 
+ cout<< "MAT erroCove Pre"<< KF.errorCovPre <<endl;
+ 
+
+ 
  Mat estimated = KF.correct(measurement);
-// cout<<KF.measurementMatrix<<endl;
+cout<<"INITIAL"<<KF.errorCovPost<<endl;
  //   cout << KF.errorCovPost<<endl;
    
  Point statePt(prediction.at<float>(0),prediction.at<float>(1));

@@ -53,7 +53,7 @@ void vector_erase ( vector<T *> vec, T * erase_this )
 
 
 // keeps track of two points
-typedef struct point {
+ struct point {
     u_int8_t x;
     u_int8_t y;
 
@@ -66,30 +66,50 @@ typedef struct point {
         y= y1;
     }
 
-} Point;
+};
 
 
 
 //represents a head location
-struct Node {
-    Point location;
+class Node {
+public:
+    point location;
     unsigned int ID = 0;
 // might not need this
     bool start_of_path = false;
 // use pointers to prevent copies
     vector<Edge *> in_edges;
     vector<Edge *> out_edges;
+     Node(int x, int y)
+     {
+       location.x = x;
+       location.y = y;
+     }
+     
+   /*  ~Node()
+     {
+       
+       for(vector<Edge *>::iterator i = out_edges.begin(); i != out_edges.end();i++)
+       {
+	  delete *i; 
+       }
+     }*/
 
 };
 
 //represents a POSSIBLE path between two temporal nodes in our TemporalGraph
-struct Edge {
-
+class Edge {
+public:
     // use pointers to prevent copies
     Node * source = 0;
     Node * target = 0;
     bool active = false;
     bool proposed = false;
+    int time_distance = 0;
+    
+    Edge()
+    {
+    }
 
 };
 

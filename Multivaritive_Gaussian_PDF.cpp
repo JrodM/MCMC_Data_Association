@@ -1,36 +1,67 @@
-#ifndef MVG_PDF_H
-#define MVG_PDF_H
-#include <stdlib.h>
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/video/tracking.hpp"
-#include <iostream>
-#include <cmath>
-# define M_PIl          3.141592653589793238462643383279502884L /* pi */
 
-using namespace std;
-using namespace cv;
+#include "Multivaritive_Gaussian_PDF.h"
 
-
-
-// This allows us to determine the pdf given the mean and covariance. This is only
-// intended for a 2x2 covariance matrix.
-
-typedef class Multivaritive_Gaussian_PDF
+float Multivaritive_Gaussian_PDF::Probability ( vector<Node *> & track_START )
 {
-public:
-   Mat covariance = 0;
-   Mat mean = 0;
-   float coefficient = 0;//everything in front of the e^(moremath)
-   Mat inverse_covariance = 0;
-   
-    Multivaritive_Gaussian_PDF(Mat c,Mat m);
-    
-    float Probability(Mat x);// x is our input
 
-  
-  
-};
+        vector<Node *>::iterator i;
 
 
+        for ( i = track_START.begin(); i!= track_START.end() ;  i++ ) {
 
-#endif
+                Node * path = i;
+                // intialize kalman filter for each path
+                KF.init ( 4,2,0 );
+                KF.transitionMatrix = ( Mat_<float> ( 4, 4 ) << 1,0,1,0,   0,1,0,1,  0,0,1,0,  0,0,0,1 );
+                KF.controlMatrix = ( Mat_<float> ( 4, 2 ) << .5,0,   0,.5,  1,0,  0,1 );
+                KF.measurementMatrix = ( Mat_<float> ( 2, 4 ) << 1,0,0,0 ,  0,1,0,0 );
+                setIdentity ( KF.processNoiseCov );
+                setIdentity ( KF.measurementNoiseCov );
+                KF.processNoiseCov =KF.processNoiseCov * 10;
+                KF.measurementNoiseCov = KF.measurementNoiseCov*5;
+
+                // set the post state to our intial pt
+                KF.statePost.at<float> ( 0 ) = i->x;
+                KF.statePost.at<float> ( 1 ) = i->y;
+                KF.statePost.at<float> ( 2 ) = 0;
+                KF.statePost.at<float> ( 3 ) = 0;
+
+        }
+
+
+}
+
+float Multivaritive_Gaussian_PDF::Track_Likelihood()
+{
+
+        Mat_<float> measurement ( 2,1 );
+        measurement.setTo ( Scalar ( 0 ) );
+
+
+        int px =0;
+        int py = 0;
+        int i = 0;
+
+// First predict, to update the internal statePre variable
+        Mat prediction = KF.predict();
+
+
+
+        Mat_<float> noise ( 2,1 );
+        noise.setTo ( Scalar ( 0 ) );
+        randn ( noise,Scalar::all ( 0 ),Scalar ( 5 ) );
+
+        measurement ( 0 ) = px;
+
+        measurement ( 1 ) = py;
+
+        measurement = measurement + noise;
+
+
+        Mat B = ( KF.measurementMatrix*KF.errorCovPre* KF.measurementMatrix.t() +KF.measurementNoiseCov );
+
+        KF.correct ( measurement );
+
+}
+
+

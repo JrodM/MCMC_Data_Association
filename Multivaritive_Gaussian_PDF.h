@@ -6,7 +6,7 @@
 #include <iostream>
 #include <cmath>
 # define M_PIl          3.141592653589793238462643383279502884L /* pi */
-
+#include "mcmc_types.h"
 using namespace std;
 using namespace cv;
 
@@ -22,11 +22,13 @@ public:
    Mat mean = 0;
    float coefficient = 0;//everything in front of the e^(moremath)
    Mat inverse_covariance = 0;
+        KalmanFilter KF ( 4, 2, 0 );
    
-    Multivaritive_Gaussian_PDF(Mat c,Mat m);
+  // use this for each seperate track just a utility function
+  float Track_Likelihood();
     
-    float Probability(Mat x);// x is our input
-
+  // returns the probablities of all the tracks
+    float Probability(vector<Node *> & track_START);
   
   
 };
