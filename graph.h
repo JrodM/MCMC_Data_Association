@@ -29,7 +29,9 @@ public:
 
     // our sliding time_eventdow of points. Each index is another point in time
     deque<vector<Node *> > sliding_window;
-
+    float pz; //probability of an object dissappearing
+    float  lambda_b;//birth rate of new objects per unit time per unit voluma
+    float lambda_f;// false alarm rate   
 
     Temporal_Entity_Tracking_Graph();
 
@@ -39,8 +41,8 @@ public:
     void newTimeEvent() ;
     //add a new point in the current time event
     void add_location_current_event(int x, int y);
-    void ConstructPaths ( int max_eucldiean_distance = 30, int max_missed_frames = 60 ) ;
-
+    void ConstructPaths ( int = 30, int = 60 ) ;
+    
 
 
 } Graph;

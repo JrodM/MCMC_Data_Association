@@ -15,8 +15,8 @@
 using namespace std;
 using namespace cv;
 struct point;
-struct Edge;
-struct Node;
+class Edge;
+class Node;
 
 // shortcut having to write loops.
 template <class T>
@@ -80,6 +80,11 @@ public:
 // use pointers to prevent copies
     vector<Edge *> in_edges;
     vector<Edge *> out_edges;
+     Edge * active_out;
+    //this is to do faster calculations for probablity less time searching the state space
+   
+    
+    
      Node(int x, int y)
      {
        location.x = x;
@@ -87,7 +92,7 @@ public:
      }
      
    /*  ~Node()
-     {
+     {s
        
        for(vector<Edge *>::iterator i = out_edges.begin(); i != out_edges.end();i++)
        {

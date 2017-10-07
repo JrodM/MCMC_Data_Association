@@ -45,7 +45,7 @@ void Temporal_Entity_Tracking_Graph:: newTimeEvent()
 
                         }
 
-                        //vector_erase(edge_list, delete_edge);
+          
 
                         // remove each of the  edges from the
                         //in_edges
@@ -74,7 +74,7 @@ void Temporal_Entity_Tracking_Graph:: newTimeEvent()
 
 }
 
-void Temporal_Entity_Tracking_Graph::ConstructPaths ( int max_eucldiean_distance = 30, int max_missed_frames = 60 )
+void Temporal_Entity_Tracking_Graph::ConstructPaths ( int max_eucldiean_distance , int max_missed_frames )
 {
 
         // loop through each window and construct paths to potential nodes in t+maxmissedframes of time.

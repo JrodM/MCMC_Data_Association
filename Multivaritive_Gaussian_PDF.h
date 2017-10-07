@@ -5,12 +5,13 @@
 #include "opencv2/video/tracking.hpp"
 #include <iostream>
 #include <cmath>
-# define M_PIl          3.141592653589793238462643383279502884L /* pi */
 #include "mcmc_types.h"
 using namespace std;
 using namespace cv;
 
 
+/* IT needs to be noted that for images the x,y start in the top left corner
+ * this probably won't be an issue but for debugging commented */
 
 // This allows us to determine the pdf given the mean and covariance. This is only
 // intended for a 2x2 covariance matrix.
@@ -18,15 +19,14 @@ using namespace cv;
 typedef class Multivaritive_Gaussian_PDF
 {
 public:
-   Mat covariance = 0;
-   Mat mean = 0;
-   float coefficient = 0;//everything in front of the e^(moremath)
-   Mat inverse_covariance = 0;
-        KalmanFilter KF ( 4, 2, 0 );
+   // state is 4 for x,y cordinates and their acceleration. 
+   KalmanFilter KF ( 4, 2, 0 );
+   // the predicted points for the kalman filter. We need this for missing points in time.
+Mat prediction;
    
   // use this for each seperate track just a utility function
   float Track_Likelihood();
-    
+ const float pi= 3.1415927;
   // returns the probablities of all the tracks
     float Probability(vector<Node *> & track_START);
   
