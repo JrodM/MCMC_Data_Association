@@ -1,5 +1,5 @@
-#ifndef MVG_PDF_H
-#define MVG_PDF_H
+#ifndef LIKELIHOOD_H
+#define LIKELIHOOD_H
 #include <stdlib.h>
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/video/tracking.hpp"
@@ -16,19 +16,19 @@ using namespace cv;
 // This allows us to determine the pdf given the mean and covariance. This is only
 // intended for a 2x2 covariance matrix.
 
-typedef class Multivaritive_Gaussian_PDF
+typedef class Likelihood
 {
 public:
    // state is 4 for x,y cordinates and their acceleration. 
    KalmanFilter KF ( 4, 2, 0 );
    // the predicted points for the kalman filter. We need this for missing points in time.
-Mat prediction;
+  Mat prediction;
    
   // use this for each seperate track just a utility function
   float Track_Likelihood();
- const float pi= 3.1415927;
+  const float pi= 3.1415927;
   // returns the probablities of all the tracks
-    float Probability(vector<Node *> & track_START);
+  float Probability(vector<Node *> & track_START);
   
   
 };

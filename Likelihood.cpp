@@ -1,7 +1,7 @@
 
-#include "Multivaritive_Gaussian_PDF.h"
+#include "Likelihood.h"
 
-float Multivaritive_Gaussian_PDF::Probability ( vector<Node *> & track_START )
+float Likelihood::Probability ( vector<Node *> & track_START )
 {
 
         vector<Node *>::iterator i;
@@ -34,9 +34,12 @@ float Multivaritive_Gaussian_PDF::Probability ( vector<Node *> & track_START )
 		//path = path->active_out;
 		
 		// calculate the path probability
+		
+		//we always assume that a track length is greater then one
+		// no need to check.
 		do{
 		  
-		  
+		
 		  // First predict, to update the internal statePre variable
 		   prediction = KF.predict();
 		  
@@ -68,7 +71,7 @@ float Multivaritive_Gaussian_PDF::Probability ( vector<Node *> & track_START )
 
 }
 
-float Multivaritive_Gaussian_PDF::Track_Likelihood(float measurement_x,float measurement_y)
+float Likelihood::Track_Likelihood(float measurement_x,float measurement_y)
 {
 
         Mat_<float> measurement ( 2,1 );
