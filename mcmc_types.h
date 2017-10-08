@@ -80,7 +80,10 @@ public:
 // use pointers to prevent copies
     vector<Edge *> in_edges;
     vector<Edge *> out_edges;
-     Edge * active_out;
+    // the single active edge
+     Edge * active_out=0;
+     // this is to store the old active out for when we propose
+     Edge * saved_out=0;
     //this is to do faster calculations for probablity less time searching the state space
    
     

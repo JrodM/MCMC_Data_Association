@@ -45,7 +45,7 @@ void Temporal_Entity_Tracking_Graph:: newTimeEvent()
 
                         }
 
-          
+
 
                         // remove each of the  edges from the
                         //in_edges
@@ -60,12 +60,12 @@ void Temporal_Entity_Tracking_Graph:: newTimeEvent()
 
 
                         }
-                        
-                        
+
+
 
                         delete delete_edge;
                 }
-		  // dont need to delete the out edge list because we are deleting a node
+                // dont need to delete the out edge list because we are deleting a node
                 delete time_event;
 
         }
@@ -74,35 +74,34 @@ void Temporal_Entity_Tracking_Graph:: newTimeEvent()
 
 }
 
-void Temporal_Entity_Tracking_Graph::ConstructPaths ( int max_eucldiean_distance , int max_missed_frames )
+void Temporal_Entity_Tracking_Graph::construct_Paths ( int max_eucldiean_distance , int max_missed_frames )
 {
 
         // loop through each window and construct paths to potential nodes in t+maxmissedframes of time.
-        // O(n**2) we actually avoid this by only constructing for the first window/event 
+        // O(n**2) we actually avoid this by only constructing for the first window/event
         // go through all possible cconnecting nodes
-	int distance = 0;
+        int distance = 0;
         for ( vector<vector<Node *>>::iterator k = sliding_window.begin() +1 ; k != sliding_window.end() && k!= sliding_window.begin() + max_missed_frames; k++ ) {
                 vector<Node*> k1 = *k;
-		// add one to the distance, this helps for probabilty calculations
-		distance++;
-		
-                for( vector<Node*>::iterator i =k1.begin(); i != k1.end();i++ ) {
-		  
-			//we only need to compare paths for the first time entry since we only
-			// get one time event at a time.
+                // add one to the distance, this helps for probabilty calculations
+                distance++;
+
+                for ( vector<Node*>::iterator i =k1.begin(); i != k1.end(); i++ ) {
+
+                        //we only need to compare paths for the first time entry since we only
+                        // get one time event at a time.
                         for ( vector<Node *>::iterator j = sliding_window[0].begin() ; j!= sliding_window[0].end(); j++ ) {
-				
-			  // construct the paths if they are close enough
-                                if ( pow ( pow ( *j->location.x-*i->location.x,2 ) + pow ( *j->location.y-*i->location.y,2 ),.5 )< max_eucldiean_distance)
-				{
-				  //the j is the source and j is the target.
-				  Edge * new_edge = new Edge();
-				  new_edge->source = *j;
-				  new_edge->target  = *i;
-				  new_edge->time_distance = distance;
-				  *j->out_edges.push(new_edge);
-				  *i->in_edges.push(new_edge);
-				}
+
+                                // construct the paths if they are close enough
+                                if ( pow ( pow ( *j->location.x-*i->location.x,2 ) + pow ( *j->location.y-*i->location.y,2 ),.5 ) < max_eucldiean_distance ) {
+                                        //the j is the source and j is the target.
+                                        Edge * new_edge = new Edge();
+                                        new_edge->source = *j;
+                                        new_edge->target  = *i;
+                                        new_edge->time_distance = distance;
+                                        *j->out_edges.push ( new_edge );
+                                        *i->in_edges.push ( new_edge );
+                                }
 
                         }
                 }
@@ -111,13 +110,103 @@ void Temporal_Entity_Tracking_Graph::ConstructPaths ( int max_eucldiean_distance
 }
 
 
-void Temporal_Entity_Tracking_Graph::add_location_current_event(int x, int y)
+// obviously add to the current window
+void Temporal_Entity_Tracking_Graph::add_Location ( int x, int y )
 {
-  sliding_window[0].pushback(new Node(x,y));
+        sliding_window[0].pushback ( new Node ( x,y ) );
 }
 
 
 
 
+//stats at time t
+void Temporal_Entity_Tracking_Graph::graph_Stats ( int t,int & at, int & zt, int & ct, int & dt, int & ut,int & ft )
+{
+        //et: number of targets from t-1
+        //at: number of new targets at time t
+        //zt: number of targets terminated at time t
+        //ct: et-zt targets persisted
+        //dt: number of detections at time T
+        //ut: et-zt+at-dt
+        //ft: nt-dt the number of false alarms
+        // nt is the total points at t
 
+        zt = 0;
+        // find targets that terminate
+
+        // num targets at t-1
+        int et = 0;
+
+        for ( auto & node: sliding_window[t-1] ) {
+                //if the track from time t doesn't have anothe active out node
+                // then we know that it terminates
+                if ( node->active_out !=0 ) {
+                        if ( node->active_out->target->active_out == 0 ) {
+                                zt++;
+                        }
+
+                        et++;
+
+                } else {
+                        for ( auto & e: node->in_edges ) {
+
+                                if ( e.active ) {
+                                        et++;
+                                        break;
+                                }
+
+                        }
+
+                }
+        }
+
+        ct = et - zt;
+
+        int nt = sliding_window[t].size();
+
+        at = 0;
+
+        for ( auto & node: sliding_window[t] ) {
+                if ( node->start_of_path == true ) {
+                        at++;
+                }
+        }
+
+
+        dt = 0;
+
+        for ( auto & node: sliding_window[t] ) {
+                //if the track from time t doesn't have anothe active out node
+                // then we know that it terminates
+                bool detected = false;
+
+                for ( auto & e: node->in_edges ) {
+                        if ( e.active == true ) {
+                                detected = true;
+                                dt++;
+                                break;
+                        }
+                }
+
+                if ( !detected ) {
+
+                        for ( auto & e: node->out_edges ) {
+                                if ( e.active == true ) {
+                                        //detected = true;
+                                        dt++;
+                                        break;
+                                }
+                        }
+
+                }
+                // if we've gone through both the in and out edge lists
+                // without seeing an active edge false detection.
+
+
+        }// end of dt and ft
+
+        ut  = et -zt + at - dt;
+        ft = nt -dt;
+
+}
 

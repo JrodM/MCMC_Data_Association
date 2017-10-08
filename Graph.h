@@ -43,7 +43,14 @@ public:
     void newTimeEvent() ;
     //add a new point in the current time event
     void add_location_current_event(int x, int y);
-    void ConstructPaths ( int = 30, int = 60 ) ;
+    //adds edges to the newest time event 
+    void construct_Paths ( int = 30, int = 60 );
+    //add current event/points to the current window
+    void add_Location(int x, int y);
+    //stats at time t. For more on the stats go to function
+    void graph_Stats( int t,int & at, int & zt, int & ct, int & dt, int & ut,int & ft );
+    // Prior functions
+    float Prior();
     
 
 
