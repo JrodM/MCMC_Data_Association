@@ -1,11 +1,11 @@
 #ifndef graph_H
 #define graph_H
 #include "mcmc_types.h"
-
+#include "Likelihood.h"
 
 #define WINDOW_SIZE 80
 
-// We assume our time_eventdow is 40 frames. We currently have 30 frames per second
+// We currently have 30 frames per second
 
 typedef class Temporal_Entity_Tracking_Graph
 {
@@ -14,7 +14,9 @@ typedef class Temporal_Entity_Tracking_Graph
 private:
     //not really needed but we push this blank array for each new time event.
     vector<Node *> blank;
-    //KalmanFilter KF ( 4, 2, 0 );
+    
+    // responsible for track likelihood functionality. Easier to wrap and modularize the kalman filter in here.
+    Likelihood track_likelihood;
 
 public:
 
@@ -24,7 +26,7 @@ public:
 
     vector<Edge*> proposal_edge_list;
     vector<Node*> start_nodes;
-     //KalmanFilter KF ( 4, 2, 0 );
+
 
 
     // our sliding time_eventdow of points. Each index is another point in time
