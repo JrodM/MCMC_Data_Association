@@ -210,3 +210,36 @@ void Temporal_Entity_Tracking_Graph::graph_Stats ( int t,int & at, int & zt, int
 
 }
 
+    // Prior functions
+    float Temporal_Entity_Tracking_Graph::Prior()
+    {
+      float prob =0;
+       int t =0;
+       int at = 0;
+       int zt = 0;
+       int  ct = 0;
+       int dt = 0;
+       int  ut = 0;
+       int  ft = 0;
+       
+       for(t = 0; t<sliding_window.size();t++)
+       {
+	 graph_Stats (t,at,zt,ct,dt,ut,ft );
+	  
+	 prob+= zt*log(pz);
+	 prob+=ct*log(1-pz);
+	 prob+=dt*log(pd);
+	 prob+=ut*log(1-pd);
+	 prob+=at*log(lambda_b);
+	 prob+=ft*log(lambda_f);
+       }
+      
+      return prob;
+    }
+    
+    //posterior
+    float Temporal_Entity_Tracking_Graph::Posterior()
+    {
+      return (Prior() + track_likelihood.Probability(start_nodes));
+    }
+
