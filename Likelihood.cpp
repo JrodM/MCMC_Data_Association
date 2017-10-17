@@ -26,8 +26,8 @@ float Likelihood::Probability ( vector<Node *> & track_START )
 		
 		// too lazy too add noise oh well.
                 // set the post state to our intial pt
-                KF.statePost.at<float> ( 0 ) = i->x;
-                KF.statePost.at<float> ( 1 ) = i->y;
+                KF.statePost.at<float> ( 0 ) = *i->x;
+                KF.statePost.at<float> ( 1 ) = *i->y;
                 KF.statePost.at<float> ( 2 ) = 0;
                 KF.statePost.at<float> ( 3 ) = 0;
 		//next state
