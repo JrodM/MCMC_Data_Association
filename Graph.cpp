@@ -79,9 +79,12 @@ void Temporal_Entity_Tracking_Graph::construct_Paths ( int max_eucldiean_distanc
 
         // loop through each window and construct paths to potential nodes in t+maxmissedframes of time.
         // O(n**2) we actually avoid this by only constructing for the first window/event
+        /* NO LONGER FIRST WINDOW WE DO THIS FOR OUR PROPOSAL WINDOW SIZE
         // go through all possible cconnecting nodes
+        for(vector<vector<Node *>>::iterator start_propose = sliding_window.begin(); start_propose != sliding_window.begin()+ PROPOSAL_WINDOW_SIZE; start_propose++)
+        {
         int distance = 0;
-        for ( vector<vector<Node *>>::iterator k = sliding_window.begin() +1 ; k != sliding_window.end() && k!= sliding_window.begin() + max_missed_frames; k++ ) {
+        for ( vector<vector<Node *>>::iterator k = start_propose +1 ; k != sliding_window.end() && k!= start_propose + max_missed_frames; k++ ) {
                 vector<Node*> k1 = *k;
                 // add one to the distance, this helps for probabilty calculations
                 distance++;
@@ -106,22 +109,22 @@ void Temporal_Entity_Tracking_Graph::construct_Paths ( int max_eucldiean_distanc
                         }
                 }
         }
+        }
+        }
 
-}
 
-
-// obviously add to the current window
-void Temporal_Entity_Tracking_Graph::add_Location ( int x, int y )
-{
+        // obviously add to the current window
+        void Temporal_Entity_Tracking_Graph::add_Location ( int x, int y )
+        {
         sliding_window[0].pushback ( new Node ( x,y ) );
-}
+        }
 
 
 
 
-//stats at time t
-void Temporal_Entity_Tracking_Graph::graph_Stats ( int t,int & at, int & zt, int & ct, int & dt, int & ut,int & ft )
-{
+        //stats at time t
+        void Temporal_Entity_Tracking_Graph::graph_Stats ( int t,int & at, int & zt, int & ct, int & dt, int & ut,int & ft )
+        {
         //et: number of targets from t-1
         //at: number of new targets at time t
         //zt: number of targets terminated at time t
@@ -208,38 +211,38 @@ void Temporal_Entity_Tracking_Graph::graph_Stats ( int t,int & at, int & zt, int
         ut  = et -zt + at - dt;
         ft = nt -dt;
 
-}
+        }
 
-    // Prior functions
-    float Temporal_Entity_Tracking_Graph::Prior()
-    {
-      float prob =0;
-       int t =0;
-       int at = 0;
-       int zt = 0;
-       int  ct = 0;
-       int dt = 0;
-       int  ut = 0;
-       int  ft = 0;
-       
-       for(t = 0; t<sliding_window.size();t++)
-       {
-	 graph_Stats (t,at,zt,ct,dt,ut,ft );
-	  
-	 prob+= zt*log(pz);
-	 prob+=ct*log(1-pz);
-	 prob+=dt*log(pd);
-	 prob+=ut*log(1-pd);
-	 prob+=at*log(lambda_b);
-	 prob+=ft*log(lambda_f);
-       }
-      
-      return prob;
-    }
-    
-    //posterior
-    float Temporal_Entity_Tracking_Graph::Posterior()
-    {
-      return (Prior() + track_likelihood.Probability(start_nodes));
-    }
+        // Prior functions
+        float Temporal_Entity_Tracking_Graph::Prior()
+        {
+        float prob =0;
+        int t =0;
+        int at = 0;
+        int zt = 0;
+        int  ct = 0;
+        int dt = 0;
+        int  ut = 0;
+        int  ft = 0;
+
+        for(t = 0; t<sliding_window.size();t++)
+        {
+         graph_Stats (t,at,zt,ct,dt,ut,ft );
+
+         prob+= zt*log(pz);
+         prob+=ct*log(1-pz);
+         prob+=dt*log(pd);
+         prob+=ut*log(1-pd);
+         prob+=at*log(lambda_b);
+         prob+=ft*log(lambda_f);
+        }
+
+        return prob;
+        }
+
+        //posterior
+        float Temporal_Entity_Tracking_Graph::Posterior()
+        {
+        return (Prior() + track_likelihood.Probability(start_nodes));
+        }
 

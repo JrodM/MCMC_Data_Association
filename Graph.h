@@ -4,7 +4,9 @@
 #include "Likelihood.h"
 
 #define WINDOW_SIZE 80
-
+// proposal window size
+// this limits how much of the track is considered mutable
+#define PROPOSAL_WINDOW_SIZE 15
 // We currently have 30 frames per second
 
 typedef class Temporal_Entity_Tracking_Graph
@@ -38,9 +40,6 @@ public:
     float lambda_f;// false alarm rate  
     /*********************************/
     
-    // maximum posterior: this is the configuration the produces the highest p(w|Y)
-    vector<vector<Node>> MAP_estimate;
-    float MAP_prob;
 
     Temporal_Entity_Tracking_Graph();
 
@@ -48,8 +47,7 @@ public:
     // pop off the most recent event and correctly initiate the next time frame
     // that contains x,y events in the form of Nodes
     void newTimeEvent() ;
-    //add a new point in the current time event
-    void add_location_current_event(int x, int y);
+
     //adds edges to the newest time event 
     void construct_Paths ( int = 30, int = 60 );
     //add current event/points to the current window
@@ -58,6 +56,8 @@ public:
     void graph_Stats( int t,int & at, int & zt, int & ct, int & dt, int & ut,int & ft );
     // Prior functions
     float Prior();
+    
+    
     //posterior
     float Posterior();
     
