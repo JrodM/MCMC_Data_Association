@@ -17,6 +17,7 @@ using namespace cv;
 struct point;
 class Edge;
 class Node;
+class Time_Frame;
 
 // shortcut having to write loops.
 template <class T>
@@ -86,12 +87,17 @@ public:
      Edge * saved_out=0;
     //this is to do faster calculations for probablity less time searching the state space
    
+    // is this node able to be changed or modified
+     //bool is_mutable = true;
     
-    
-     Node(int x, int y)
+     //a pointer to the window frame the point is in. We can find the time in an O(1) fashion.
+     Time_Frame * frame = 0;
+     
+     Node(int x, int y, Time_Frame * t)
      {
        location.x = x;
        location.y = y;
+       frame = t;
      }
      
    /*  ~Node()
@@ -119,6 +125,16 @@ public:
     {
     }
 
+};
+
+class Time_Frame{
+public:
+  Time_Frame()
+  {
+    
+  }
+  vector<Node *> frame;
+  int time =0;
 };
 
 

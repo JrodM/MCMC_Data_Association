@@ -4,19 +4,42 @@
 
 class MCMCDA
 {
-  public:
-  Graph proposal_graph;
-  
-      // maximum posterior: this is the configuration the produces the highest p(w|Y)
+public:
+    Graph proposal_graph;
+
+    // maximum posterior: this is the configuration the produces the highest p(w|Y)
     vector<vector<Node>> MAP_estimate;
     float MAP_prob;
-    
-    
+
+    // may have to reconsider probability functions but this holds all unassigned nodes
+    vector<vector<Node *>> noise;
+
+    std::random_device rd;  //Will be used to obtain a seed for the random number engine
+    std::mt19937 * gen;
+    const float gamma  = .001; // the chance of ending a track early
+    /******************FUNCTIONS*******************/
+
     //add a new point in the current time event
-    
-    void add_location_current_event(int x, int y);
-    
-    
+
+    void add_location_current_event ( int x, int y );
+
+    void Propose_Deactivate ( Edge * e );
+    void Propose_Activate ( Edge * e );
+    int track_Length ( Node * n );
+    vector<Edge * > Inactive_Nodes ( Node *n );
+
+    bool Is_Active ( Node *n );
+
+    //proposal moves
+    bool Extend ( Node * n );
+    bool Birth_Move();
+    bool Death_Move();
+    bool Update_Move();
+
+
+    MCMCDA();
+    ~MCMCDA();
+
 };
 
 

@@ -15,7 +15,7 @@ typedef class Temporal_Entity_Tracking_Graph
 
 private:
     //not really needed but we push this blank array for each new time event.
-    vector<Node *> blank;
+    Time_Frame blank;
     
     // responsible for track likelihood functionality. Easier to wrap and modularize the kalman filter in here.
     Likelihood track_likelihood;
@@ -31,7 +31,7 @@ public:
 
 
     // our sliding time_eventdow of points. Each index is another point in time
-    deque<vector<Node *> > sliding_window;
+    deque<Time_Frame > sliding_window;
     
     /* Parameters that can be tuned */
     float pz; //probability of an object dissappearing
@@ -47,6 +47,7 @@ public:
     // pop off the most recent event and correctly initiate the next time frame
     // that contains x,y events in the form of Nodes
     void newTimeEvent() ;
+    void set_Time_Frames();
 
     //adds edges to the newest time event 
     void construct_Paths ( int = 30, int = 60 );
