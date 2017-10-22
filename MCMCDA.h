@@ -26,15 +26,21 @@ public:
     void Propose_Deactivate ( Edge * e );
     void Propose_Activate ( Edge * e );
     int track_Length ( Node * n );
+    vector<Node*> get_Tracks_At_T(int t);
+    Edge * nodes_2_Edge(Node * n1, Node * n2);
     vector<Edge * > Inactive_Nodes ( Node *n );
-
     bool Is_Active ( Node *n );
+    
 
     //proposal moves
     bool Extend ( Node * n );
     bool Birth_Move();
     bool Death_Move();
     bool Update_Move();
+    bool Extension_Move();
+    bool Reduction_Move();
+    bool Switch(Node* t1, Node * t2);
+    bool Propose_Switch();
 
 
     MCMCDA();
