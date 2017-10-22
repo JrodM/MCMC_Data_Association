@@ -5,7 +5,7 @@ LIBS = `pkg-config --libs opencv`
 INCLUDE = 
 FREE_LIBS = -L/usr/local/lib -lpthread -lopencv_core -lopencv_imgproc -lopencv_highgui -lopencv_objdetect
 
-test:  *.cpp 
+test:  *.cpp *.h
 	g++ $(INCLUDE) $(CFLAGS) $? -o $@  $(LIBS) $(FREE_LIBS)
 
 %.o: %.cpp

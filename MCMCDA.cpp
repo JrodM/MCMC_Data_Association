@@ -1,18 +1,18 @@
 #include "MCMCDA.h"
 
 
-MCMCDA()
+MCMCDA::MCMCDA()
 {
         /*for ( int i = 0 ; i<proposal_list.size(); i++ ) { // also there is out of bounds access (usage of <=) in your code
                 ( this->*proposal_list[i] ) (); // or (*this.*callist[i])();
         }
-            bool Extend ( Node * n );
+            bool Extend ( TNode * n );
         bool Birth_Move();
         bool Death_Move();
         bool Update_Move();
         bool Extension_Move();
         bool Reduction_Move();
-        bool Switch(Node* t1, Node * t2);
+        bool Switch(TNode* t1, TNode * t2);
         bool Switch_Move();
         bool Merge_Move();
         bool Split_Move();
@@ -30,25 +30,25 @@ MCMCDA()
 
 }
 
-~MCMCDA()
+MCMCDA::~MCMCDA()
 {
-        free gen;
+        free ( gen );
 }
 
 // obviously add to the current window
-void MCMCDA::add_Location ( int x, int y )
+/*void MCMCDA::add_Location ( int x, int y )
 {
-        // proposal_graph.sliding_window[proposal_graph.sliding_window.size()-1].pushback ( new Node ( x,y ) );
-}
+        // proposal_graph.sliding_window[proposal_graph.sliding_window.size()-1].pushback ( new TNode ( x,y ) );
+}*/
 
 
 //is the node active
-bool MCMCDA::Is_Active ( Node *n )
+bool MCMCDA::Is_Active ( TNode *n )
 {
 
 
         for ( auto & x : n->in_edges ) {
-                if ( x.active ==true ) {
+                if ( x->active ==true ) {
                         return true;
                 }
         }
@@ -67,7 +67,7 @@ bool MCMCDA::Is_Active ( Node *n )
 // also ONLY leads to nodes that are in our proposal window
 // this is used in our extend functions.
 // basically new nodes can be added to our tracks
-vector<Edge * > MCMCDA::Inactive_Nodes ( Node * n )
+vector<Edge * > MCMCDA::Inactive_TNodes ( TNode * n )
 {
         vector<Edge * >  m;
         for ( auto & x : n->out_edges ) {
@@ -123,7 +123,7 @@ void MCMCDA::Propose_Activate ( Edge * e )
 
         if ( e->target->start_of_path == true ) {
                 e->target->start_of_path = false;
-		 e->source->start_of_path = true;
+                e->source->start_of_path = true;
                 vector_erase ( proposal_graph.start_nodes,e->target );
         }
 
@@ -131,10 +131,10 @@ void MCMCDA::Propose_Activate ( Edge * e )
 }
 
 // get the active tracks at time t
-vector<Node*> MCMCDA::get_Tracks_At_T ( int t )
+vector<TNode*> MCMCDA::get_Tracks_At_T ( int t )
 {
 
-        vector<Node*> pts;
+        vector<TNode*> pts;
 
         for ( auto & pt: proposal_graph.sliding_window[t].frame ) {
                 if ( Is_Active ( pt ) ) {
@@ -148,7 +148,7 @@ vector<Node*> MCMCDA::get_Tracks_At_T ( int t )
 
 //finds an edge between two points/nodes
 //n1 comes first temporally then two
-Edge * nodes_2_Edge ( Node * n1, Node * n2 )
+Edge * MCMCDA:: nodes_2_Edge ( TNode * n1, TNode * n2 )
 {
 
         for ( auto & e: n1->out_edges ) {
@@ -162,11 +162,11 @@ Edge * nodes_2_Edge ( Node * n1, Node * n2 )
 
 // true means we didnt meet any reasons to reject the move.
 // false means we should reject
-bool MCMCDA::Extend ( Node * n )
+bool MCMCDA::Extend ( TNode * n )
 {
         std::uniform_real_distribution<> dis ( 0.0,1.0 );
         int track_len = 0;
-        vector<Edge * > valid_edges = Inactive_Nodes ( n );
+        vector<Edge * > valid_edges = Inactive_TNodes ( n );
 
         // if size is only equal to none
         if ( valid_edges.size() ==0 ) {
@@ -178,9 +178,9 @@ bool MCMCDA::Extend ( Node * n )
 
 
                 // if our only option is is one that one advanced forward to reassign.
-                if ( valid_edges.size() ==1 && valid_edges[0].active == true ) {
+                if ( valid_edges.size() ==1 && valid_edges[0]->active == true ) {
 
-                        valid_edges = Inactive_Nodes ( valid_edges[0]->target );
+                        valid_edges = Inactive_TNodes ( valid_edges[0]->target );
 
                 } else {
 
@@ -192,7 +192,7 @@ bool MCMCDA::Extend ( Node * n )
                         e = valid_edges[dis2 ( *gen )];
 
                         Propose_Activate ( e );
-                        valid_edges = Inactive_Nodes ( e->target );
+                        valid_edges = Inactive_TNodes ( e->target );
                         track_len++;
                 }
 
@@ -215,11 +215,11 @@ bool MCMCDA::Birth_Move()
 // the time position to birth a new track
         int r = dis ( *gen );
 
-        vector<Node*> frame = proposal_graph.sliding_window[r];
+        vector<TNode*> frame = proposal_graph.sliding_window[r].frame;
 
-        vector<Node *> in_active;
+        vector<TNode *> in_active;
 
-        for ( auto & x: proposal_graph.sliding_window[r] ) {
+        for ( auto & x: proposal_graph.sliding_window[r].frame ) {
 
                 if ( !Is_Active ( x ) ) {
                         in_active.push_back ( x );
@@ -279,12 +279,12 @@ bool MCMCDA::Death_Move()
 
 }
 
-int MCMCDA::track_Length ( Node * n )
+int MCMCDA::track_Length ( TNode * n )
 {
         int i =0;
 
         while ( n ) {
-                n = n ->active_out;
+                n = n ->active_out->target;
                 i++;
         }
 
@@ -305,7 +305,7 @@ bool MCMCDA:: Update_Move()
 
 
         int r = dis2 ( *gen );// start node
-        Node * n = proposal_graph.start_nodes[r];
+        TNode * n = proposal_graph.start_nodes[r];
         //r = dis ( *gen );// time
 
         //find on this path where we can start updating
@@ -343,18 +343,18 @@ bool MCMCDA:: Update_Move()
 
 
 //returns a list of tracks that are extendable and return ptrs to the end of them
-vector<Node*> MCMCDA:: extendable_Tracks()
+vector<TNode*> MCMCDA:: extendable_Tracks()
 {
         //return
-        vector<Node*> r_this;
+        vector<TNode*> r_this;
 
         for ( auto & n: proposal_graph.start_nodes ) {
                 while ( n->active_out ) {
-                        n = n->active_out;
+                        n = n->active_out->target;
                 }
 
                 // this is cheapy because it still loops thru whole vector
-                vector<Edges*> m = Inactive_Nodes ( n );
+                vector<Edge *> m = Inactive_TNodes ( n );
                 if ( m.size() >0 ) {
                         r_this.push_back ( n );
                 }
@@ -364,9 +364,9 @@ vector<Node*> MCMCDA:: extendable_Tracks()
         return r_this;
 }
 
-bool MCMCDA::Propose_Extension()
+bool MCMCDA::Extension_Move()
 {
-        vector<Node*> acceptable_tracks = extendable_Tracks();
+        vector<TNode*> acceptable_tracks = extendable_Tracks();
 
         if ( acceptable_tracks.size() == 0 ) {
                 return false;
@@ -376,7 +376,7 @@ bool MCMCDA::Propose_Extension()
         int r = dis ( *gen );
         // chose an radom track and a random poin
 
-        Node * n = acceptable_tracks[r];
+        TNode * n = acceptable_tracks[r];
 
 
         return Extend ( n );
@@ -384,14 +384,14 @@ bool MCMCDA::Propose_Extension()
 }
 
 
-bool MCMCDA::Propose_Reduction()
+bool MCMCDA::Reduction_Move()
 {
 
-        vector<Node*> first_mutable_node;
+        vector<TNode*> first_mutable_node;
 
         for ( auto & n: proposal_graph.start_nodes ) {
                 while ( n->frame->time < proposal_graph.sliding_window.size()-PROPOSAL_WINDOW_SIZE ) {
-                        n = n->active_out;
+                        n = n->active_out->target;
                 }
                 if ( n != 0 ) {
                         first_mutable_node.push_back ( n );
@@ -406,24 +406,26 @@ bool MCMCDA::Propose_Reduction()
         std::uniform_real_distribution<> dis ( 0 ,first_mutable_node.size()-1 );
         int r = dis ( *gen );
         // chose an radom track and a random point on that track
-        Node * n = first_mutable_node[r];
+        TNode * n = first_mutable_node[r];
         int len = track_Length ( n );
-        std::uniform_real_distribution<> dis ( 0 ,len-1 );
-        r = dis ( *gen );
+        std::uniform_real_distribution<> dis2 ( 0 ,len-1 );
+        r = dis2 ( *gen );
 
+        TNode * temp = 0;
         while ( r ) {
+                temp = n;
                 n = n->active_out->target;
                 r--;
         }
 
-        Propose_Deactivate ( n );
+        Propose_Deactivate ( temp->active_out );
 
         return true;
 }
 
 
 // attempt to switch tracks attach t1 to t2 +1 and vice versa
-bool MCMCDA::Switch ( Node* t1, Node * t2 )
+bool MCMCDA::Switch ( TNode* t1, TNode * t2 )
 {
         Edge *  t1_NE = t1->active_out;
         Edge *  t2_NE = t2->active_out;
@@ -431,8 +433,8 @@ bool MCMCDA::Switch ( Node* t1, Node * t2 )
         if ( t1_NE ==0 || t2_NE ==0 ) {
                 return false;
         }
-        Node *  t1_N = t1->active_out->target;
-        Node *  t2_N = t2->active_out->target;
+        TNode *  t1_N = t1->active_out->target;
+        TNode *  t2_N = t2->active_out->target;
 
         Edge *  t1_t2N = nodes_2_Edge ( t1,t2_N );
         Edge *  t2_t1N = nodes_2_Edge ( t2,t1_N );
@@ -468,7 +470,7 @@ bool MCMCDA::Switch_Move()
 
         for ( auto & r: time_vec ) {
 
-                vector<Node*> active_tracks = get_Tracks_At_T ( r );
+                vector<TNode*> active_tracks = get_Tracks_At_T ( r );
 
                 if ( active_tracks.size() >= 2 ) {
 
@@ -476,13 +478,13 @@ bool MCMCDA::Switch_Move()
 
                         std::uniform_real_distribution<> dis2 ( 0,active_tracks.size()-1 );
                         int index_t1 = dis2 ( *gen );
-                        Node * t1 = active_tracks[index_t1];
+                        TNode * t1 = active_tracks[index_t1];
 
                         vector_erase ( active_tracks,t1 );
 
-                        std::uniform_real_distribution<> dis2 ( 0,active_tracks.size()-1 );
-                        int index_t2 = dis2 ( *gen );
-                        Node * t2 = active_tracks[index_t2];
+                        std::uniform_real_distribution<> dis1 ( 0,active_tracks.size()-1 );
+                        int index_t2 = dis1 ( *gen );
+                        TNode * t2 = active_tracks[index_t2];
                         // Now we've acquired both tracks, attempt to switch
                         // get the next pt in the track
                         if ( Switch ( t1,t2 ) == true ) {
@@ -498,18 +500,18 @@ bool MCMCDA::Switch_Move()
 // return a list of the end of the tracks who cotain edges that lead to the start of a track.
 // the vector of edges accounts for more then one possible track merge from the same track
 // algorithm O N ^3
-vector<tuple<Node*,vector<Edge *>>> MCMCDA::mergable_Vectors()
+vector<tuple<TNode*,vector<Edge *>>> MCMCDA::mergable_Vectors()
 {
-        Node* n = 0;
+        TNode* n = 0;
         vector<Edge *> edge_list;
-        vector<tuple<Node*,vector<Edge *>>> r_this;
+        vector<tuple<TNode*,vector<Edge *>>> r_this;
         for ( auto & n_temp: proposal_graph.start_nodes ) {
 
                 //  int i=0;
                 n = n_temp;
                 while ( n->active_out ) {
                         // i++;
-                        n = n->active_out;
+                        n = n->active_out->target;
                 }
                 edge_list.clear();
                 for ( auto & e: n->out_edges ) {
@@ -521,7 +523,7 @@ vector<tuple<Node*,vector<Edge *>>> MCMCDA::mergable_Vectors()
                 }
                 // now we have our edge list if its greater then zero keep track of it.
                 if ( edge_list.size() != 0 ) {
-                        r_this.push_back ( tuple<Node*,vector<Edge *>> ( n,r_this ) );
+                        r_this.push_back ( make_tuple ( n,edge_list ) );
                 }
         }
         return r_this;
@@ -530,7 +532,7 @@ vector<tuple<Node*,vector<Edge *>>> MCMCDA::mergable_Vectors()
 //rememeber to set start of path to false;
 bool MCMCDA::Merge_Move()
 {
-        vector<tuple<Node*,vector<Edge *>>> options = mergable_Vectors();
+        vector<std::tuple<TNode*,vector<Edge *>>> options = mergable_Vectors();
 
         if ( options.size() == 0 ) {
                 return false;
@@ -538,11 +540,11 @@ bool MCMCDA::Merge_Move()
 
         std::uniform_real_distribution<> dis ( 0,options.size()-1 );
         int r = dis ( *gen );
-        Node *n1 = get<0> ( options[r] );
+        TNode *n1 = get<0> ( options[r] );
         vector<Edge *> e = get<1> ( options[r] );
 
-        std::uniform_real_distribution<> dis ( 0,e.size()-1 );
-        r = dis ( *gen );
+        std::uniform_real_distribution<> dis2 ( 0,e.size()-1 );
+        r = dis2 ( *gen );
         Edge * proposal_e = e[r];
 
         Propose_Activate ( proposal_e );
@@ -557,11 +559,11 @@ bool MCMCDA::Split_Move()
 
         // find all of  the tracks that meet the criteria for a split move
         // use tuple so we dont have to go find length again
-        vector<std::tuple<Node*,int>> split_tracks;
+        vector<std::tuple<TNode*,int>> split_tracks;
         for ( auto & n: proposal_graph.start_nodes ) {
                 int len = track_Length ( n );
                 if ( len >3 ) {
-                        split_tracks.push_back ( std::tuple<Node*, int > ( n,len ) );
+                        split_tracks.push_back ( std::make_tuple ( n,len ) );
                 }
         }
 
@@ -571,13 +573,13 @@ bool MCMCDA::Split_Move()
 
         std::uniform_real_distribution<> dis2 ( 0, split_tracks.size() );
         int r = dis2 ( *gen );
-        Node * n = std::get<0> ( split_tracks[r] );
+        TNode * n = std::get<0> ( split_tracks[r] );
         int len = std::get<1> ( split_tracks[r] );
 
         std::uniform_real_distribution<> dis ( 2,len-2 );
 
         r = dis ( *gen );
-        Node * temp;
+        TNode * temp;
         while ( r ) {
                 temp = n;
                 n = n->active_out->target;
@@ -586,11 +588,11 @@ bool MCMCDA::Split_Move()
         }
 
         n->start_of_path = true;
-        temp->active_out;
+        // temp->active_out= 0;
         temp->active_out->proposed = true;
         temp->active_out->active = false;
-        temp->active_out->source->saved_out =   temp->active_out->source->active_out;
-        temp->active_out->source->active_out = 0;
+        temp->saved_out =   temp->active_out;
+        temp->active_out = 0;
         proposal_graph.proposal_edge_list.push_back ( temp->active_out );
         return true;
 
@@ -602,7 +604,7 @@ void MCMCDA::Accept_Proposal()
 {
 
         for ( auto & e : proposal_graph.proposal_edge_list ) {
-               // e.active = false;
+                // e.active = false;
         }
 
         proposal_graph.proposal_edge_list.clear();
@@ -615,31 +617,131 @@ void MCMCDA::Reject_Proposal()
         for ( auto & e : proposal_graph.proposal_edge_list ) {
                 // if active
                 if ( e->active ==true ) {
-	
+
+                } else {
+                        // if the first node is the start of the track destroy it
+                        // if it destroys the track
+                        if ( e->source->start_of_path == true ) {
+                                vector_erase ( proposal_graph.start_nodes,e->source );
+                        }
+
+                        // if rejecting from a merge move
+                        if ( track_Length ( e->source ) >1 ) {
+                                e->target->start_of_path = true;
+                                proposal_graph.start_nodes.push_back ( e->target );
+                        }
+
+
+
                 }
-                else
-		{
-		  // if the first node is the start of the track destroy it
-		  // if it destroys the track
-		  if(e->source->start_of_path == true)
-		  {
-		    vector_erase(proposal_graph.proposal_edge_list,e->source);
-		  }
-		  
-		  // if rejecting from a merge move
-		  if(track_Length(e->source) >1)
-		  {
-		    e->target->start_of_path = true;
-		    proposal_graph.start_nodes.push_back(e->target);
-		  }
-		  
-		 
-		  
-		}
-		
-		 e->source->active_out = e->source->saved_out;
+
+                e->source->active_out = e->source->saved_out;
                 e->active = !e->active;
 
         }
+
+}
+
+void MCMCDA::Sampler()
+{
+        vector<TNode> m;
+        // if theres no observations then we should assign a probabilty of zero.
+        // another function that should be added in is if there arent any nodes we have to force a birth move.
+
+        if ( proposal_graph.total_observations == 0 ) {
+                MAP_prob = 0.0;
+                MAP_estimate.clear();
+                return;
+        }
+
+        if ( proposal_graph.start_nodes.size() == 0 && proposal_graph.total_observations>=2 ) {
+
+                if ( !Birth_Move() ) {
+
+                        return ;
+                }
+
+                MAP_estimate.clear();
+                MAP_prob = proposal_graph.Posterior();
+
+                for ( auto & n : proposal_graph.start_nodes ) {
+                        TNode * trvs = n;
+
+                        m.clear();
+
+                        while ( trvs ) {
+
+                                m .push_back ( trvs );
+                                trvs = trvs->active_out->target;
+                        }
+                }
+                MAP_estimate.push_back ( m );
+        }
+
+        std::uniform_real_distribution<> dis ( 0, proposal_list.size()-1 );
+        std::uniform_real_distribution<> dis2 ( 0.0, 1.0 );
+        // at the end of our loop we have to set W to the max configurations
+        for ( int i = 0 ; i < 500; i++ ) {
+
+                int r = dis ( *gen );
+
+                // call a proposal function aka a move
+                bool sucess = ( this->*proposal_list[r] ) ();
+
+                // if the move is valid
+                if ( sucess ) {
+                        float current_config_prob = proposal_graph.Posterior();
+
+
+                        if ( MAP_prob == 0.0 ) {
+                                // accept the configuration since we dont have one to compare against
+                                MAP_estimate.clear();
+                                for ( auto & n : proposal_graph.start_nodes ) {
+                                        TNode * trvs = n;
+
+                                        m.clear();
+
+                                        while ( trvs ) {
+
+                                                m .push_back ( trvs );
+                                                trvs = trvs->active_out->target;
+                                        }
+                                }
+                                MAP_estimate.push_back ( m );
+                        } else {
+                                //mcmc simulated annnealing with a constant temp value
+                                if ( dis2 ( *gen ) < std::min ( 1.0f, ( current_config_prob/MAP_prob ) ) ) {
+
+                                        // accept the configuration since we dont have one to compare against
+                                        MAP_estimate.clear();
+                                        MAP_prob = current_config_prob;
+
+                                        for ( auto & n : proposal_graph.start_nodes ) {
+                                                TNode * trvs = n;
+
+                                                m.clear();
+
+                                                while ( trvs ) {
+
+                                                        m .push_back ( trvs );
+                                                        trvs = trvs->active_out->target;
+                                                }
+                                        }
+                                        MAP_estimate.push_back ( m );
+                                        Accept_Proposal();
+                                } else {
+
+                                        Reject_Proposal();
+                                }
+                        }
+
+                }
+
+
+        }
+
+
+
+
 
 }

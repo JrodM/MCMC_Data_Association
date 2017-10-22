@@ -19,16 +19,17 @@ using namespace cv;
 typedef class Likelihood
 {
 public:
+  Likelihood();
    // state is 4 for x,y cordinates and their acceleration. 
-   KalmanFilter KF ( 4, 2, 0 );
+   KalmanFilter KF;
    // the predicted points for the kalman filter. We need this for missing points in time.
   Mat prediction;
    
   // use this for each seperate track just a utility function
-  float Track_Likelihood();
+  float Track_Likelihood(float measurement_x,float measurement_y);
   const float pi= 3.1415927;
   // returns the probablities of all the tracks
-  float Probability(vector<Node *> & track_START);
+  float Probability(vector<TNode *> & track_START);
   
   
 };

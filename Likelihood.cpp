@@ -1,10 +1,15 @@
 
 #include "Likelihood.h"
+Likelihood::Likelihood()
+{
+  //might be wasteful tbh
+  KF.init ( 4, 2, 0 );
+}
 
-float Likelihood::Probability ( vector<Node *> & track_START )
+float Likelihood::Probability ( vector<TNode *> & track_START )
 {
 
-        vector<Node *>::iterator i;
+        vector<TNode *>::iterator i;
 
 	float probability;
 	
@@ -12,7 +17,7 @@ float Likelihood::Probability ( vector<Node *> & track_START )
 	
         for ( i = track_START.begin(); i!= track_START.end() ;  i++ ) {
 
-                Node * path = *i;
+                TNode * path = *i;
                 // intialize kalman filter for each path
                 KF.init ( 4,2,0 );
                 KF.transitionMatrix = ( Mat_<float> ( 4, 4 ) << 1,0,1,0,   0,1,0,1,  0,0,1,0,  0,0,0,1 );
@@ -26,8 +31,8 @@ float Likelihood::Probability ( vector<Node *> & track_START )
 		
 		// too lazy too add noise oh well.
                 // set the post state to our intial pt
-                KF.statePost.at<float> ( 0 ) = *i->x;
-                KF.statePost.at<float> ( 1 ) = *i->y;
+                KF.statePost.at<float> ( 0 ) = (*i)->location.x;
+                KF.statePost.at<float> ( 1 ) = (*i)->location.y;
                 KF.statePost.at<float> ( 2 ) = 0;
                 KF.statePost.at<float> ( 3 ) = 0;
 		//next state
@@ -59,7 +64,7 @@ float Likelihood::Probability ( vector<Node *> & track_START )
 		    
 		  }
 		  
-		path = path->active_out;
+		path = path->active_out->target;
 		
 		probability+=Track_Likelihood(path->location.x,path->location.y);
 		  
@@ -95,7 +100,8 @@ float Likelihood::Track_Likelihood(float measurement_x,float measurement_y)
 	
 	Mat_<float> sub= ( Mat_<float> ( 2, 1 ) << ((prediction.at<float>(0)-measurement_x),(prediction.at<float>(1)-measurement_y)));
 	//.5 comes from the fact we only have two measurements m .... 1/m is the pow 
-	float event_probability = -0.5*log(2 *pi)+-0.5 *log(determinant(B))+(-0.5*sub.t()* B.inv()*sub);
+	float event_probability = 0;
+	event_probability = ((cv::Mat)(-0.5*log(2 *pi)+-0.5 *log(determinant(B))+(-0.5*sub.t()* B.inv()*sub))).at<float>(0);
 	
 	
         KF.correct ( measurement );

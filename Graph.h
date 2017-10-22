@@ -26,9 +26,10 @@ public:
     // we map all of the addresses of the node.outedges
     // and delete only if we delete the node producing the connection.
     vector<Edge*> proposal_edge_list;
-    vector<Node*> start_nodes;
-
-
+    vector<TNode*> start_nodes;
+    
+    // total observations;
+    unsigned int total_observations = 0;
 
     // our sliding time_eventdow of points. Each index is another point in time
     deque<Time_Frame > sliding_window;
@@ -45,7 +46,7 @@ public:
 
 
     // pop off the most recent event and correctly initiate the next time frame
-    // that contains x,y events in the form of Nodes
+    // that contains x,y events in the form of TNodes
     void newTimeEvent() ;
     void set_Time_Frames();
 

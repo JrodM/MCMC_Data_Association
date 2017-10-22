@@ -8,11 +8,11 @@ public:
     Graph proposal_graph;
 
     // maximum posterior: this is the configuration the produces the highest p(w|Y)
-    vector<vector<Node>> MAP_estimate;
-    float MAP_prob;
+    vector<vector<TNode>> MAP_estimate;
+    float MAP_prob = 0.00;
 
     // may have to reconsider probability functions but this holds all unassigned nodes
-    vector<vector<Node *>> noise;
+    vector<vector<TNode *>> noise;
 
     std::random_device rd;  //Will be used to obtain a seed for the random number engine
     std::mt19937 * gen;
@@ -27,23 +27,23 @@ public:
 
     void Propose_Deactivate ( Edge * e );
     void Propose_Activate ( Edge * e );
-    int track_Length ( Node * n );
-    vector<Node*> get_Tracks_At_T(int t);
-    Edge * nodes_2_Edge(Node * n1, Node * n2);
-    vector<Node*> extendable_Tracks();
-    vector<tuple<Node*,vector<Edge *>>> mergable_Vectors();
-    vector<Edge * > Inactive_Nodes ( Node *n );
-    bool Is_Active ( Node *n );
+    int track_Length ( TNode * n );
+    vector<TNode*> get_Tracks_At_T(int t);
+    Edge * nodes_2_Edge(TNode * n1, TNode * n2);
+    vector<TNode*> extendable_Tracks();
+    vector<tuple<TNode*,vector<Edge *>>> mergable_Vectors();
+    vector<Edge * > Inactive_TNodes ( TNode *n );
+    bool Is_Active ( TNode *n );
     
 
     //proposal moves
-    bool Extend ( Node * n );
+    bool Extend ( TNode * n );
     bool Birth_Move();
     bool Death_Move();
     bool Update_Move();
     bool Extension_Move();
     bool Reduction_Move();
-    bool Switch(Node* t1, Node * t2);
+    bool Switch(TNode* t1, TNode * t2);
     bool Switch_Move();
     bool Merge_Move();
     bool Split_Move();
@@ -51,12 +51,14 @@ public:
     void Accept_Proposal();
     void Reject_Proposal();
     
+    void Sampler();
+    
     MCMCDA();
     ~MCMCDA();
     
 /************************************************/
     //list of different proposal functions
-    vector<bool (*) ()> proposal_list;
+    vector<bool (MCMCDA::*) ()> proposal_list;
 
 };
 

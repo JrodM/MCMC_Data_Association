@@ -101,15 +101,18 @@ while(1)
       
  // The update phase 
  Mat B = (KF.measurementMatrix*KF.errorCovPre* KF.measurementMatrix.t()+KF.measurementNoiseCov);
-  
- cout << "MAT B"<< B <<endl;
+  	Mat_<float> sub= ( Mat_<float> ( 2, 1 ) << ((prediction.at<float>(0)-measurement(0),(prediction.at<float>(1)-measurement(1)))));
+	//.5 comes from the fact we only have two measurements m .... 1/m is the pow 
+	float event_probability = 0;
+	
+ cout << (determinant(B)+-0.5*sub.t()* B.inv()*sub).at<float>(0) <<endl;
  
- cout<< "MAT erroCove Pre"<< KF.errorCovPre <<endl;
+ //cout<< "MAT erroCove Pre"<< KF.errorCovPre <<endl;
  
 
  
  Mat estimated = KF.correct(measurement);
-cout<<"INITIAL"<<KF.errorCovPost<<endl;
+//cout<<"INITIAL"<<KF.errorCovPost<<endl;
  //   cout << KF.errorCovPost<<endl;
    
  Point statePt(prediction.at<float>(0),prediction.at<float>(1));

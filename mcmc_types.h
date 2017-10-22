@@ -16,7 +16,7 @@ using namespace std;
 using namespace cv;
 struct point;
 class Edge;
-class Node;
+class TNode;
 class Time_Frame;
 
 // shortcut having to write loops.
@@ -72,7 +72,7 @@ void vector_erase ( vector<T *> vec, T * erase_this )
 
 
 //represents a head location
-class Node {
+class TNode {
 public:
     point location;
     unsigned int ID = 0;
@@ -93,14 +93,21 @@ public:
      //a pointer to the window frame the point is in. We can find the time in an O(1) fashion.
      Time_Frame * frame = 0;
      
-     Node(int x, int y, Time_Frame * t)
+     TNode(int x, int y, Time_Frame * t)
      {
        location.x = x;
        location.y = y;
        frame = t;
      }
      
-   /*  ~Node()
+      TNode(TNode * n)
+      {
+	location = n->location;
+	start_of_path =  n->start_of_path;
+	active_out = n->active_out;
+	frame = n->frame;
+      }
+   /*  ~TNode()
      {s
        
        for(vector<Edge *>::iterator i = out_edges.begin(); i != out_edges.end();i++)
@@ -115,8 +122,8 @@ public:
 class Edge {
 public:
     // use pointers to prevent copies
-    Node * source = 0;
-    Node * target = 0;
+    TNode * source = 0;
+    TNode * target = 0;
     bool active = false;
     bool proposed = false;
     int time_distance = 0;
@@ -133,7 +140,7 @@ public:
   {
     
   }
-  vector<Node *> frame;
+  vector<TNode *> frame;
   int time =0;
 };
 

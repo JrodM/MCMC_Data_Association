@@ -1,6 +1,6 @@
 #include "Graph.h"
 
-Temporal_Entity_Tracking_Graph()
+Temporal_Entity_Tracking_Graph::Temporal_Entity_Tracking_Graph()
 {
         // this is used to fill and initialize our time_eventdow
 
@@ -12,12 +12,13 @@ Temporal_Entity_Tracking_Graph()
 
 
 // pop off the most recent event and correctly initiate the next time frame
-// that contains x,y events in the form of Nodes
+// that contains x,y events in the form of TNodes
 
 void Temporal_Entity_Tracking_Graph:: newTimeEvent()
 {
 
         Time_Frame earliest_window = sliding_window[0];
+	total_observations -= earliest_window.frame.size();
         sliding_window.pop_front();
 
         sliding_window.push_back ( blank );
@@ -25,9 +26,9 @@ void Temporal_Entity_Tracking_Graph:: newTimeEvent()
         // clean up memmory with edges etc and correctly move the beginning nodes over
 
 
-        for ( vector<Node *>::iterator i = earliest_window.frame.begin(); i != earliest_window.frame.end(); i++ ) {
+        for ( vector<TNode *>::iterator i = earliest_window.frame.begin(); i != earliest_window.frame.end(); i++ ) {
 
-                Node * time_event = *i;
+                TNode * time_event = *i;
 
                 // for each edge in the outedges delete
                 //clean up edges
@@ -85,25 +86,25 @@ void Temporal_Entity_Tracking_Graph::construct_Paths ( int max_eucldiean_distanc
         for ( deque<Time_Frame>::reverse_iterator start_propose = sliding_window.rbegin(); start_propose != sliding_window.rbegin() + PROPOSAL_WINDOW_SIZE; start_propose++ ) {
                 int distance = 0;
                 for ( deque<Time_Frame>::reverse_iterator k = start_propose +1 ; k != sliding_window.rend() && k!= start_propose + max_missed_frames; k++ ) {
-                        vector<Node*> k1 = ( *k ).frame;
+                        vector<TNode*> k1 = ( *k ).frame;
                         // add one to the distance, this helps for probabilty calculations
                         distance++;
 
                         // for eachnode in the time window
-                        for ( vector<Node*>::iterator i =k1.begin(); i != k1.end(); i++ ) {
+                        for ( vector<TNode*>::iterator i =k1.begin(); i != k1.end(); i++ ) {
                                 // k1 is the source
 
-                                for ( vector<Node *>::iterator j = ( *start_propose ).frame.begin() ; j!= ( *start_propose ).frame.end(); j++ ) {
+                                for ( vector<TNode *>::iterator j = ( *start_propose ).frame.begin() ; j!= ( *start_propose ).frame.end(); j++ ) {
 
                                         // construct the paths if they are close enough
-                                        if ( pow ( pow ( *j->location.x-*i->location.x,2 ) + pow ( *j->location.y-*i->location.y,2 ),.5 ) < max_eucldiean_distance ) {
+                                        if ( pow ( pow ( (*j)->location.x-(*i)->location.x,2 ) + pow ( (*j)->location.y-(*i)->location.y,2 ),.5 ) < max_eucldiean_distance ) {
                                                 //the i  is the source and jis the target.
                                                 Edge * new_edge = new Edge();
                                                 new_edge->source = *i;
                                                 new_edge->target  = *j;
                                                 new_edge->time_distance = distance;
-                                                *i->out_edges.push ( new_edge );
-                                                *j->in_edges.push ( new_edge );
+                                                (*i)->out_edges.push_back ( new_edge );
+                                                (*j)->in_edges.push_back ( new_edge );
                                         }
 
                                 }
@@ -112,7 +113,7 @@ void Temporal_Entity_Tracking_Graph::construct_Paths ( int max_eucldiean_distanc
         }
 
         /* Clean up the mutable node's */
-        /*   for ( vector<vector<Node *>>::reverse_iterator start_propose = sliding_window.rbegin() +PROPOSAL_WINDOW_SIZE; start_propose != sliding_window.rend() && start_propose !=sliding_window.rbegin() + PROPOSAL_WINDOW_SIZE+ PROPOSAL_WINDOW_SIZE; start_propose++ ) {
+        /*   for ( vector<vector<TNode *>>::reverse_iterator start_propose = sliding_window.rbegin() +PROPOSAL_WINDOW_SIZE; start_propose != sliding_window.rend() && start_propose !=sliding_window.rbegin() + PROPOSAL_WINDOW_SIZE+ PROPOSAL_WINDOW_SIZE; start_propose++ ) {
 
                    //clean up node in each window
                    for ( auto &clean: *start_propose ) {
@@ -139,7 +140,8 @@ void Temporal_Entity_Tracking_Graph::set_Time_Frames()
 // obviously add to the current window
 void Temporal_Entity_Tracking_Graph::add_Location ( int x, int y )
 {
-        sliding_window[sliding_window.size()-1].frame.pushback ( new Node ( x,y,&sliding_window[sliding_window.size()-1] ) );
+        sliding_window[sliding_window.size()-1].frame.push_back ( new TNode ( x,y,&sliding_window[sliding_window.size()-1] ) );
+	total_observations++;
 
 }
 
@@ -178,7 +180,7 @@ void Temporal_Entity_Tracking_Graph::graph_Stats ( int t,int & at, int & zt, int
                         } else {
                                 for ( auto & e: node->in_edges ) {
 
-                                        if ( e.active ) {
+                                        if ( e->active ) {
                                                 et++;
                                                 break;
                                         }
@@ -210,7 +212,7 @@ void Temporal_Entity_Tracking_Graph::graph_Stats ( int t,int & at, int & zt, int
                 bool detected = false;
 
                 for ( auto & e: node->in_edges ) {
-                        if ( e.active == true ) {
+                        if ( e->active == true ) {
                                 detected = true;
                                 dt++;
                                 break;
@@ -220,7 +222,7 @@ void Temporal_Entity_Tracking_Graph::graph_Stats ( int t,int & at, int & zt, int
                 if ( !detected ) {
 
                         for ( auto & e: node->out_edges ) {
-                                if ( e.active == true ) {
+                                if ( e->active == true ) {
                                         //detected = true;
                                         dt++;
                                         break;
