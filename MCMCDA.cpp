@@ -40,12 +40,14 @@ bool MCMCDA::Is_Active ( Node *n )
 }
 
 // return a list of possible edges that dont lead to activated nodes.
-// also only leads to nodes that are in our proposal window
+// also ONLY leads to nodes that are in our proposal window
+// this is used in our extend functions.
+// basically new nodes can be added to our tracks
 vector<Edge * > MCMCDA::Inactive_Nodes ( Node * n )
 {
         vector<Edge * >  m;
         for ( auto & x : n->out_edges ) {
-                if ( x->target->frame.time > proposal_graph.sliding_window.size()-PROPOSAL_WINDOW_SIZE  && ( !Is_Active ( x->target ) || x->active ) ) {
+                if ( x->target->frame->time >= proposal_graph.sliding_window.size()-PROPOSAL_WINDOW_SIZE  && ( !Is_Active ( x->target ) || x->active ) ) {
                         m.push_back ( x );
                 }
         }
@@ -56,11 +58,10 @@ vector<Edge * > MCMCDA::Inactive_Nodes ( Node * n )
 void MCMCDA::Propose_Deactivate ( Edge * e )
 {
 
-  if(e->source->start_of_path == true)
-  {
-    e->source->start_of_path = false;
-   vector_erase( proposal_graph.start_nodes,e->source);
-  }
+        if ( e->source->start_of_path == true ) {
+                e->source->start_of_path = false;
+                vector_erase ( proposal_graph.start_nodes,e->source );
+        }
         e->proposed = true;
         e->active = false;
         e->source->saved_out =  e->source->active_out;
@@ -166,6 +167,11 @@ bool MCMCDA::Extend ( Node * n )
 
 
         }
+        // lets not calculate the probability :)
+        if ( track_len == 0 ) {
+                return false;
+        }
+
         return true;
 }
 
@@ -273,7 +279,7 @@ bool MCMCDA:: Update_Move()
 
         //find on this path where we can start updating
         int start_index = 0;
-        while ( n->active_out &&n->active_out->target->frame.time < proposal_graph.sliding_window.size()-PROPOSAL_WINDOW_SIZE ) {
+        while ( n->active_out &&n->active_out->target->frame->time < proposal_graph.sliding_window.size()-PROPOSAL_WINDOW_SIZE ) {
                 n = n->active_out->target;
                 start_index++;
         }
@@ -305,11 +311,86 @@ bool MCMCDA:: Update_Move()
 }
 
 
+//returns a list of tracks that are extendable and return ptrs to the end of them
+vector<Node*> MCMCDA:: extendable_Tracks()
+{
+        //return
+        vector<Node*> r_this;
+
+        for ( auto & n: proposal_graph.start_nodes ) {
+                while ( n->active_out ) {
+                        n = n->active_out;
+                }
+
+                // this is cheapy because it still loops thru whole vector
+                vector<Edges*> m = Inactive_Nodes ( n );
+                if ( m.size() >0 ) {
+                        r_this.push_back ( n );
+                }
+
+        }
+
+        return r_this;
+}
+
 bool MCMCDA::Propose_Extension()
 {
+        vector<Node*> acceptable_tracks = extendable_Tracks();
 
+        if ( acceptable_tracks.size() == 0 ) {
+                return false;
+        }
+
+        std::uniform_real_distribution<> dis ( 0,acceptable_tracks.size()-1 );
+        int r = dis ( *gen );
+        // chose an radom track and a random poin
+
+        Node * n = acceptable_tracks[r];
+
+
+        return Extend ( n );
 
 }
+
+
+bool MCMCDA::Propose_Reduction()
+{
+
+        vector<Node*> first_mutable_node;
+
+        for ( auto & n: proposal_graph.start_nodes ) {
+                while ( n->frame->time < proposal_graph.sliding_window.size()-PROPOSAL_WINDOW_SIZE ) {
+                        n = n->active_out;
+                }
+                if ( n != 0 ) {
+                        first_mutable_node.push_back ( n );
+                }
+
+        }
+
+        if ( first_mutable_node.size() == 0 ) {
+                return false;
+        }
+
+        std::uniform_real_distribution<> dis ( 0 ,first_mutable_node.size()-1 );
+        int r = dis ( *gen );
+        // chose an radom track and a random point on that track
+        Node * n = first_mutable_node[r];
+        int len = track_Length ( n );
+	  std::uniform_real_distribution<> dis ( 0 ,len-1 );
+	  r = dis(*gen);
+	  
+	  while(r)
+	  {
+	    n = n->active_out->target;
+	    r--;
+	  }
+	  
+	  Propose_Deactivate(n);
+	  
+	  return true;
+}
+
 
 // attempt to switch tracks attach t1 to t2 +1 and vice versa
 bool MCMCDA::Switch ( Node* t1, Node * t2 )
@@ -344,7 +425,7 @@ bool MCMCDA::Propose_Switch()
         }
 
         std::vector<int> time_vec;
-	// the range from which we can propose track switches
+        // the range from which we can propose track switches
         // fill vec and shuffle. run through
         for ( int i =  proposal_graph.sliding_window.size()-PROPOSAL_WINDOW_SIZE ; i <= proposal_graph.sliding_window.size(); i++ ) {
                 time_vec.push_back ( i );
@@ -354,7 +435,7 @@ bool MCMCDA::Propose_Switch()
 
         std::random_shuffle ( time_vec.begin(),time_vec.end() );
 
-      
+
         for ( auto & r: time_vec ) {
 
                 vector<Node*> active_tracks = get_Tracks_At_T ( r );

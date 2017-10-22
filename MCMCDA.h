@@ -28,6 +28,7 @@ public:
     int track_Length ( Node * n );
     vector<Node*> get_Tracks_At_T(int t);
     Edge * nodes_2_Edge(Node * n1, Node * n2);
+    vector<Node*> extendable_Tracks();
     vector<Edge * > Inactive_Nodes ( Node *n );
     bool Is_Active ( Node *n );
     
