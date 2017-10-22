@@ -3,6 +3,28 @@
 
 MCMCDA()
 {
+        /*for ( int i = 0 ; i<proposal_list.size(); i++ ) { // also there is out of bounds access (usage of <=) in your code
+                ( this->*proposal_list[i] ) (); // or (*this.*callist[i])();
+        }
+            bool Extend ( Node * n );
+        bool Birth_Move();
+        bool Death_Move();
+        bool Update_Move();
+        bool Extension_Move();
+        bool Reduction_Move();
+        bool Switch(Node* t1, Node * t2);
+        bool Switch_Move();
+        bool Merge_Move();
+        bool Split_Move();
+        */
+        proposal_list.push_back ( &MCMCDA::Birth_Move );
+        proposal_list.push_back ( &MCMCDA::Death_Move );
+        proposal_list.push_back ( &MCMCDA::Update_Move );
+        proposal_list.push_back ( &MCMCDA::Extension_Move );
+        proposal_list.push_back ( &MCMCDA::Reduction_Move );
+        proposal_list.push_back ( &MCMCDA::Switch_Move );
+        proposal_list.push_back ( &MCMCDA::Merge_Move );
+        proposal_list.push_back ( &MCMCDA::Split_Move );
 
         gen = new std::mt19937 ( rd() );
 
@@ -38,6 +60,8 @@ bool MCMCDA::Is_Active ( Node *n )
         return false;
 
 }
+
+
 
 // return a list of possible edges that dont lead to activated nodes.
 // also ONLY leads to nodes that are in our proposal window
@@ -96,6 +120,13 @@ void MCMCDA::Propose_Activate ( Edge * e )
         }
 
         e->source->active_out = e;
+
+        if ( e->target->start_of_path == true ) {
+                e->target->start_of_path = false;
+		 e->source->start_of_path = true;
+                vector_erase ( proposal_graph.start_nodes,e->target );
+        }
+
         proposal_graph.proposal_edge_list.push_back ( e );
 }
 
@@ -377,18 +408,17 @@ bool MCMCDA::Propose_Reduction()
         // chose an radom track and a random point on that track
         Node * n = first_mutable_node[r];
         int len = track_Length ( n );
-	  std::uniform_real_distribution<> dis ( 0 ,len-1 );
-	  r = dis(*gen);
-	  
-	  while(r)
-	  {
-	    n = n->active_out->target;
-	    r--;
-	  }
-	  
-	  Propose_Deactivate(n);
-	  
-	  return true;
+        std::uniform_real_distribution<> dis ( 0 ,len-1 );
+        r = dis ( *gen );
+
+        while ( r ) {
+                n = n->active_out->target;
+                r--;
+        }
+
+        Propose_Deactivate ( n );
+
+        return true;
 }
 
 
@@ -417,7 +447,7 @@ bool MCMCDA::Switch ( Node* t1, Node * t2 )
 
 }
 
-bool MCMCDA::Propose_Switch()
+bool MCMCDA::Switch_Move()
 {
 
         if ( proposal_graph.start_nodes.size() < 2 ) {
@@ -465,5 +495,151 @@ bool MCMCDA::Propose_Switch()
 
 }
 
+// return a list of the end of the tracks who cotain edges that lead to the start of a track.
+// the vector of edges accounts for more then one possible track merge from the same track
+// algorithm O N ^3
+vector<tuple<Node*,vector<Edge *>>> MCMCDA::mergable_Vectors()
+{
+        Node* n = 0;
+        vector<Edge *> edge_list;
+        vector<tuple<Node*,vector<Edge *>>> r_this;
+        for ( auto & n_temp: proposal_graph.start_nodes ) {
 
-//ix the Ld function. D = frame # * max speed increase.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            return true
+                //  int i=0;
+                n = n_temp;
+                while ( n->active_out ) {
+                        // i++;
+                        n = n->active_out;
+                }
+                edge_list.clear();
+                for ( auto & e: n->out_edges ) {
+                        for ( auto & start_n: proposal_graph.start_nodes ) {
+                                if ( e->target == start_n && start_n->frame->time < proposal_graph.sliding_window.size()-PROPOSAL_WINDOW_SIZE ) {
+                                        edge_list.push_back ( e );
+                                }
+                        }
+                }
+                // now we have our edge list if its greater then zero keep track of it.
+                if ( edge_list.size() != 0 ) {
+                        r_this.push_back ( tuple<Node*,vector<Edge *>> ( n,r_this ) );
+                }
+        }
+        return r_this;
+}
+
+//rememeber to set start of path to false;
+bool MCMCDA::Merge_Move()
+{
+        vector<tuple<Node*,vector<Edge *>>> options = mergable_Vectors();
+
+        if ( options.size() == 0 ) {
+                return false;
+        }
+
+        std::uniform_real_distribution<> dis ( 0,options.size()-1 );
+        int r = dis ( *gen );
+        Node *n1 = get<0> ( options[r] );
+        vector<Edge *> e = get<1> ( options[r] );
+
+        std::uniform_real_distribution<> dis ( 0,e.size()-1 );
+        r = dis ( *gen );
+        Edge * proposal_e = e[r];
+
+        Propose_Activate ( proposal_e );
+
+        return true;
+        // taken care of now when we propose proposal_e->target->start_of_path =false;
+
+}
+
+bool MCMCDA::Split_Move()
+{
+
+        // find all of  the tracks that meet the criteria for a split move
+        // use tuple so we dont have to go find length again
+        vector<std::tuple<Node*,int>> split_tracks;
+        for ( auto & n: proposal_graph.start_nodes ) {
+                int len = track_Length ( n );
+                if ( len >3 ) {
+                        split_tracks.push_back ( std::tuple<Node*, int > ( n,len ) );
+                }
+        }
+
+        if ( split_tracks.size() == 0 ) {
+                return false;
+        }
+
+        std::uniform_real_distribution<> dis2 ( 0, split_tracks.size() );
+        int r = dis2 ( *gen );
+        Node * n = std::get<0> ( split_tracks[r] );
+        int len = std::get<1> ( split_tracks[r] );
+
+        std::uniform_real_distribution<> dis ( 2,len-2 );
+
+        r = dis ( *gen );
+        Node * temp;
+        while ( r ) {
+                temp = n;
+                n = n->active_out->target;
+                r--;
+
+        }
+
+        n->start_of_path = true;
+        temp->active_out;
+        temp->active_out->proposed = true;
+        temp->active_out->active = false;
+        temp->active_out->source->saved_out =   temp->active_out->source->active_out;
+        temp->active_out->source->active_out = 0;
+        proposal_graph.proposal_edge_list.push_back ( temp->active_out );
+        return true;
+
+}
+//ix the Ld function. D = frame # * max speed increase.
+
+
+void MCMCDA::Accept_Proposal()
+{
+
+        for ( auto & e : proposal_graph.proposal_edge_list ) {
+               // e.active = false;
+        }
+
+        proposal_graph.proposal_edge_list.clear();
+
+}
+
+void MCMCDA::Reject_Proposal()
+{
+
+        for ( auto & e : proposal_graph.proposal_edge_list ) {
+                // if active
+                if ( e->active ==true ) {
+	
+                }
+                else
+		{
+		  // if the first node is the start of the track destroy it
+		  // if it destroys the track
+		  if(e->source->start_of_path == true)
+		  {
+		    vector_erase(proposal_graph.proposal_edge_list,e->source);
+		  }
+		  
+		  // if rejecting from a merge move
+		  if(track_Length(e->source) >1)
+		  {
+		    e->target->start_of_path = true;
+		    proposal_graph.start_nodes.push_back(e->target);
+		  }
+		  
+		 
+		  
+		}
+		
+		 e->source->active_out = e->source->saved_out;
+                e->active = !e->active;
+
+        }
+
+}

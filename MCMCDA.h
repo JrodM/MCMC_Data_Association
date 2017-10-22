@@ -17,6 +17,8 @@ public:
     std::random_device rd;  //Will be used to obtain a seed for the random number engine
     std::mt19937 * gen;
     const float gamma  = .001; // the chance of ending a track early
+    
+    
     /******************FUNCTIONS*******************/
 
     //add a new point in the current time event
@@ -29,6 +31,7 @@ public:
     vector<Node*> get_Tracks_At_T(int t);
     Edge * nodes_2_Edge(Node * n1, Node * n2);
     vector<Node*> extendable_Tracks();
+    vector<tuple<Node*,vector<Edge *>>> mergable_Vectors();
     vector<Edge * > Inactive_Nodes ( Node *n );
     bool Is_Active ( Node *n );
     
@@ -41,11 +44,19 @@ public:
     bool Extension_Move();
     bool Reduction_Move();
     bool Switch(Node* t1, Node * t2);
-    bool Propose_Switch();
+    bool Switch_Move();
+    bool Merge_Move();
+    bool Split_Move();
 
-
+    void Accept_Proposal();
+    void Reject_Proposal();
+    
     MCMCDA();
     ~MCMCDA();
+    
+/************************************************/
+    //list of different proposal functions
+    vector<bool (*) ()> proposal_list;
 
 };
 
