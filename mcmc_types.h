@@ -10,7 +10,6 @@
 #include <cmath>
 
 
-#define WINDOW_SIZE 80
 
 using namespace std;
 using namespace cv;
@@ -21,7 +20,7 @@ class Time_Frame;
 
 // shortcut having to write loops.
 template <class T>
-void vector_erase ( vector<T *> vec, T * erase_this )
+void vector_erase ( vector<T *> & vec, T * erase_this )
 {
 
     int iter = 0;
@@ -106,6 +105,7 @@ public:
 	start_of_path =  n->start_of_path;
 	active_out = n->active_out;
 	frame = n->frame;
+	cout<<"Node spam"<<endl;
       }
    /*  ~TNode()
      {s

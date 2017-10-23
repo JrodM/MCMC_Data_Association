@@ -8,15 +8,16 @@ Likelihood::Likelihood()
 
 float Likelihood::Probability ( vector<TNode *> & track_START )
 {
+  cout<<"Starting Likelihood func: size of start nodes "<<track_START.size()<<endl;
 
         vector<TNode *>::iterator i;
 
-	float probability;
+	float probability = 0;
 	
 	/* Do the track likelihood fist*/
 	
         for ( i = track_START.begin(); i!= track_START.end() ;  i++ ) {
-
+		 cout<<" Start Track Loop"<<endl;
                 TNode * path = *i;
                 // intialize kalman filter for each path
                 KF.init ( 4,2,0 );
@@ -42,6 +43,7 @@ float Likelihood::Probability ( vector<TNode *> & track_START )
 		
 		//we always assume that a track length is greater then one
 		// no need to check.
+		cout<<"Do while"<<path->active_out<<endl;
 		do{
 		  
 		
@@ -58,26 +60,30 @@ float Likelihood::Probability ( vector<TNode *> & track_START )
 		    
 		    //account for missed detections
 		    do{
+		      cout<<"Accounting for missed detections"<<endl;
 		    probability += Track_Likelihood(prediction.at<float>(0),prediction.at<float>(1));
 		    prediction = KF.predict();
 		    }while(--counter>1);
-		    
+		    cout<<"DONE accounting for miss detections"<<endl;
 		  }
 		  
+		cout<<"track size "<<path->active_out<<endl;
 		path = path->active_out->target;
 		
-		probability+=Track_Likelihood(path->location.x,path->location.y);
+		probability+=Track_Likelihood((float)path->location.x,(float)path->location.y);
 		  
-		}while(path != 0);
+		  
+		}while(path->active_out != 0);
 		
         }
-        
+        cout<<"Likelihood is done"<<endl;
         return probability;
 
 }
 
 float Likelihood::Track_Likelihood(float measurement_x,float measurement_y)
 {
+  cout<<"Using track likelihood x "<< measurement_x <<" y "<<measurement_y<<endl;
 
         Mat_<float> measurement ( 2,1 );
         measurement.setTo ( Scalar ( 0 ) );

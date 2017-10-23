@@ -41,7 +41,46 @@ MCMCDA::~MCMCDA()
         // proposal_graph.sliding_window[proposal_graph.sliding_window.size()-1].pushback ( new TNode ( x,y ) );
 }*/
 
+void MCMCDA::track_Start_Search()
+{
+        proposal_graph.start_nodes.clear();
 
+        for ( auto & fra : proposal_graph.sliding_window ) {
+                for ( auto & pt : fra.frame ) {
+                        if ( pt->active_out ) {
+                                bool is_start = true;;
+
+                                for ( auto & x : pt->in_edges ) {
+                                        if ( x->active ==true ) {
+                                                is_start = false;
+                                                break;
+
+                                        }
+                                }
+
+
+                                if ( is_start ) {
+                                        proposal_graph.start_nodes.push_back ( pt );
+                                        pt->start_of_path = true;
+                                }
+                        }
+                }
+        }
+
+}
+
+void MCMCDA::drawEntityPaths ( Mat &image )
+{
+        cout<<"drawing Paths "<< MAP_estimate.size() <<endl;
+
+        for ( vector<vector<TNode>>::iterator i = MAP_estimate.begin(); i!= MAP_estimate.end(); i++ ) {
+                for ( vector<TNode>::iterator j = ( *i ).begin(); j+1 != ( *i ).end(); j++ ) {
+                        line ( image, Point ( ( *j ).location.x, ( *j ).location.y ), Point ( ( * ( j+1 ) ).location.x, ( * ( j+1 ) ).location.y ), SCALAR_GREEN, 2 );
+
+                }
+
+        }
+}
 //is the node active
 bool MCMCDA::Is_Active ( TNode *n )
 {
@@ -82,10 +121,13 @@ vector<Edge * > MCMCDA::Inactive_TNodes ( TNode * n )
 void MCMCDA::Propose_Deactivate ( Edge * e )
 {
 
-        if ( e->source->start_of_path == true ) {
+        /*if ( e->source->start_of_path == true ) {
                 e->source->start_of_path = false;
+
                 vector_erase ( proposal_graph.start_nodes,e->source );
-        }
+                cout<<"destroyed the start track"<<endl<<proposal_graph.start_nodes.size() <<endl;
+        }*/
+
         e->proposed = true;
         e->active = false;
         e->source->saved_out =  e->source->active_out;
@@ -104,6 +146,7 @@ void MCMCDA::Propose_Activate ( Edge * e )
         }
 
         e->active = true;
+        e->proposed = true;
         // set source to save its out edge
         // delete target out path if there is outpath
         if ( e->source->active_out != 0 ) {
@@ -121,13 +164,14 @@ void MCMCDA::Propose_Activate ( Edge * e )
 
         e->source->active_out = e;
 
-        if ( e->target->start_of_path == true ) {
+        /*if ( e->target->start_of_path == true ) {
                 e->target->start_of_path = false;
                 e->source->start_of_path = true;
                 vector_erase ( proposal_graph.start_nodes,e->target );
-        }
+        }*/
 
         proposal_graph.proposal_edge_list.push_back ( e );
+        cout<<"Proposing "<< e->source->frame->time<< "<=From | To=> " << e->target->frame->time<< " " << e->source->active_out<<endl;
 }
 
 // get the active tracks at time t
@@ -209,6 +253,7 @@ bool MCMCDA::Extend ( TNode * n )
 //returns false if creation chosen isn't possible or breaks some rules
 bool MCMCDA::Birth_Move()
 {
+        cout<<"Birth Move "<<endl;
         //
         // the back end of our graph is were we are sampling from
         std::uniform_real_distribution<> dis ( proposal_graph.sliding_window.size()-PROPOSAL_WINDOW_SIZE,proposal_graph.sliding_window.size()-1 );
@@ -240,6 +285,8 @@ bool MCMCDA::Birth_Move()
 
                 in_active[r]->start_of_path = true;
                 proposal_graph.start_nodes.push_back ( in_active[r] );
+
+                return true;
         }
 
         return false;
@@ -247,6 +294,8 @@ bool MCMCDA::Birth_Move()
 
 bool MCMCDA::Death_Move()
 {
+
+        cout<<"Death Move "<<endl;
         if ( proposal_graph.start_nodes.size() == 0 ) {
                 return false;
         }
@@ -281,9 +330,9 @@ bool MCMCDA::Death_Move()
 
 int MCMCDA::track_Length ( TNode * n )
 {
-        int i =0;
+        int i =1;
 
-        while ( n ) {
+        while ( n->active_out ) {
                 n = n ->active_out->target;
                 i++;
         }
@@ -296,7 +345,7 @@ int MCMCDA::track_Length ( TNode * n )
 // else choose uniform at random the points after too extend
 bool MCMCDA:: Update_Move()
 {
-
+        cout<<"Update Move "<<endl;
         if ( proposal_graph.start_nodes.size() == 0 ) {
                 return false;
         }
@@ -366,6 +415,7 @@ vector<TNode*> MCMCDA:: extendable_Tracks()
 
 bool MCMCDA::Extension_Move()
 {
+        cout<<"Extension Move "<<endl;
         vector<TNode*> acceptable_tracks = extendable_Tracks();
 
         if ( acceptable_tracks.size() == 0 ) {
@@ -386,11 +436,16 @@ bool MCMCDA::Extension_Move()
 
 bool MCMCDA::Reduction_Move()
 {
-
+        cout<<"Reduction Move "<<endl;
         vector<TNode*> first_mutable_node;
 
         for ( auto & n: proposal_graph.start_nodes ) {
                 while ( n->frame->time < proposal_graph.sliding_window.size()-PROPOSAL_WINDOW_SIZE ) {
+                        if ( n->active_out == 0 ) {
+                                n =0;
+                                break;
+                        }
+                        cout<< "Seg: Reduction: "<<n->active_out->target<<endl;
                         n = n->active_out->target;
                 }
                 if ( n != 0 ) {
@@ -407,19 +462,44 @@ bool MCMCDA::Reduction_Move()
         int r = dis ( *gen );
         // chose an radom track and a random point on that track
         TNode * n = first_mutable_node[r];
+
+        cout<<"Length acquiting"<<endl;
         int len = track_Length ( n );
+
+        int active_in_len = 0;
+        // find the depth of the nodes behind it. We need  length of 3 to reduce
+        for ( auto & ed : n->in_edges ) {
+                if ( ed->active ==true ) {
+                        Edge * eds = ed;
+                        active_in_len = 1;
+                        for ( auto & e2 : eds->source->in_edges ) {
+                                if ( e2->active ==true ) {
+                                        active_in_len = 2;
+                                        break;
+                                }
+                        }
+
+                        break;
+                }
+        }
+
+        if ( len + active_in_len <3 ) {
+                return false;
+        }
+
         std::uniform_real_distribution<> dis2 ( 0 ,len-1 );
         r = dis2 ( *gen );
+        cout<<"DONE Length acquiting "<<len<<" "<<r<<endl;
 
-        TNode * temp = 0;
+        TNode * temp = n;
         while ( r ) {
                 temp = n;
                 n = n->active_out->target;
                 r--;
         }
-
+        cout<<"Done searching"<< endl;
         Propose_Deactivate ( temp->active_out );
-
+        cout<<endl<<"END Reduction Move "<<endl;
         return true;
 }
 
@@ -451,7 +531,7 @@ bool MCMCDA::Switch ( TNode* t1, TNode * t2 )
 
 bool MCMCDA::Switch_Move()
 {
-
+        cout<<"Switch Move "<<endl;
         if ( proposal_graph.start_nodes.size() < 2 ) {
                 return false;
         }
@@ -532,6 +612,7 @@ vector<tuple<TNode*,vector<Edge *>>> MCMCDA::mergable_Vectors()
 //rememeber to set start of path to false;
 bool MCMCDA::Merge_Move()
 {
+        cout<<"Sampling Merge Move "<<endl;
         vector<std::tuple<TNode*,vector<Edge *>>> options = mergable_Vectors();
 
         if ( options.size() == 0 ) {
@@ -556,7 +637,7 @@ bool MCMCDA::Merge_Move()
 
 bool MCMCDA::Split_Move()
 {
-
+        cout<<"Sampling Split Move "<<endl;
         // find all of  the tracks that meet the criteria for a split move
         // use tuple so we dont have to go find length again
         vector<std::tuple<TNode*,int>> split_tracks;
@@ -602,9 +683,10 @@ bool MCMCDA::Split_Move()
 
 void MCMCDA::Accept_Proposal()
 {
+        cout<<endl<<endl<<"ACCEPTING PROPOSAL"<<endl<<endl;
 
         for ( auto & e : proposal_graph.proposal_edge_list ) {
-                // e.active = false;
+                e->proposed = false;
         }
 
         proposal_graph.proposal_edge_list.clear();
@@ -618,130 +700,231 @@ void MCMCDA::Reject_Proposal()
                 // if active
                 if ( e->active ==true ) {
 
+                        // e->source -> start_of_path =false;
+                        e->source->active_out = e->source->saved_out;
+                        e->source->saved_out =0;
+
                 } else {
                         // if the first node is the start of the track destroy it
                         // if it destroys the track
-                        if ( e->source->start_of_path == true ) {
-                                vector_erase ( proposal_graph.start_nodes,e->source );
-                        }
+                        /* if ( e->source->start_of_path == true ) {
+                                 vector_erase ( proposal_graph.start_nodes,e->source );
+                         }
 
-                        // if rejecting from a merge move
-                        if ( track_Length ( e->source ) >1 ) {
-                                e->target->start_of_path = true;
-                                proposal_graph.start_nodes.push_back ( e->target );
-                        }
+                         // if rejecting from a merge move
+                         if ( track_Length ( e->source ) >1 ) {
+                                 e->target->start_of_path = true;
+                                 proposal_graph.start_nodes.push_back ( e->target );
+                         }*/
 
-
+                        e->source->active_out = e;
 
                 }
 
-                e->source->active_out = e->source->saved_out;
+
                 e->active = !e->active;
 
         }
+
+        proposal_graph.proposal_edge_list.clear();
 
 }
 
 void MCMCDA::Sampler()
 {
         vector<TNode> m;
+        float previous_prob = 0;
+        vector<vector<TNode>>previous_config;
         // if theres no observations then we should assign a probabilty of zero.
         // another function that should be added in is if there arent any nodes we have to force a birth move.
 
+        track_Start_Search();
+
         if ( proposal_graph.total_observations == 0 ) {
-                MAP_prob = 0.0;
+
+                // previous_config.clear();
                 MAP_estimate.clear();
+                MAP_prob = 0;
+                //previous_prob = 0.0001f;
+
+                cout<<"NOTHING TO VIEW"<<endl;
                 return;
         }
 
-        if ( proposal_graph.start_nodes.size() == 0 && proposal_graph.total_observations>=2 ) {
+        // this is for intializing
+        if ( proposal_graph.total_observations<2 ) {
+                return;
+        } else  if ( proposal_graph.start_nodes.size() == 0 ) {
 
-                if ( !Birth_Move() ) {
+                for ( int i = 0 ; i < PROPOSAL_WINDOW_SIZE-1; i++ ) {
+                        if ( Birth_Move() ) {
+                                cout<<"Succesful Birth"<<endl;
+                                // Accept_Proposal();
+                                break;
 
-                        return ;
+                        }
+
+                        Reject_Proposal();
+
+                        //if we could find anything quit
+                        if ( i == PROPOSAL_WINDOW_SIZE-2 ) {
+                                return;
+                        }
                 }
 
+
+                previous_config.clear();
                 MAP_estimate.clear();
-                MAP_prob = proposal_graph.Posterior();
+
+                MAP_prob = previous_prob = proposal_graph.Posterior();
+
+                track_Start_Search();
 
                 for ( auto & n : proposal_graph.start_nodes ) {
                         TNode * trvs = n;
 
                         m.clear();
 
-                        while ( trvs ) {
-
-                                m .push_back ( trvs );
-                                trvs = trvs->active_out->target;
-                        }
-                }
-                MAP_estimate.push_back ( m );
-        }
-
-        std::uniform_real_distribution<> dis ( 0, proposal_list.size()-1 );
-        std::uniform_real_distribution<> dis2 ( 0.0, 1.0 );
-        // at the end of our loop we have to set W to the max configurations
-        for ( int i = 0 ; i < 500; i++ ) {
-
-                int r = dis ( *gen );
-
-                // call a proposal function aka a move
-                bool sucess = ( this->*proposal_list[r] ) ();
-
-                // if the move is valid
-                if ( sucess ) {
-                        float current_config_prob = proposal_graph.Posterior();
-
-
-                        if ( MAP_prob == 0.0 ) {
-                                // accept the configuration since we dont have one to compare against
-                                MAP_estimate.clear();
-                                for ( auto & n : proposal_graph.start_nodes ) {
-                                        TNode * trvs = n;
-
-                                        m.clear();
-
-                                        while ( trvs ) {
-
-                                                m .push_back ( trvs );
-                                                trvs = trvs->active_out->target;
-                                        }
+                        while ( trvs != 0 ) {
+                                // cout<<"#1.1 "<< trvs->active_out<<endl;
+                                m .push_back ( TNode ( trvs ) );
+                                //cout<<"#1.2 "<< trvs->active_out->target<<endl;
+                                if ( trvs->active_out == 0 ) {
+                                        break;
                                 }
-                                MAP_estimate.push_back ( m );
-                        } else {
-                                //mcmc simulated annnealing with a constant temp value
-                                if ( dis2 ( *gen ) < std::min ( 1.0f, ( current_config_prob/MAP_prob ) ) ) {
 
+                                trvs = trvs->active_out->target;
+
+                        }
+
+                        cout<<"#2"<<endl;
+                        //cvWaitKey(100);
+                        previous_config.push_back ( m );
+                }
+
+                MAP_estimate = previous_config;
+                Accept_Proposal();
+                cout<<"#3"<<endl;
+        } else {
+
+                // this is loading the previous optimal state as well as the memory / immutable part of the graph
+                previous_config = MAP_estimate;
+                previous_config = MAP_prob;
+
+                //start the graph over
+                Edge * erase = 0;
+                for ( auto & n: proposal_graph.start_nodes ) {
+                        erase = n->active_out;
+                        while ( erase->target->active_out ) {
+                                Propose_Deactivate ( erase );
+                                erase = erase ->target->active_out;
+                        }
+                        Propose_Deactivate ( erase );
+                }
+
+
+                /* Now reintialize based of the MAP estimate
+		 
+		 Down low we need a case to update the MAP
+		 */
+
+                }
+
+                /*else if
+                *
+                * Load initial state as MAP if there is one.
+                *
+                * This is handled at the end of the Sampler. We have our MAP set to clear out. At
+                * the end of the sampler we then set our graph back to our MAP for the next sampler call.
+                *
+                * If we are this far use an else then we can assume we have a preious config (since startnodes >0)
+                * and user our map prob as our previous prob and our
+                */
+
+                std::uniform_real_distribution<> dis ( 0, proposal_list.size()-1 );
+                std::uniform_real_distribution<> dis2 ( 0.0, 1.0 );
+                // at the end of our loop we have to set W to the max configurations
+                for ( int i = 0 ; i < 1000; i++ ) {
+
+                        track_Start_Search();
+
+                        int r = dis ( *gen );
+
+                        // call a proposal function aka a move
+                        bool sucess = ( this->*proposal_list[r] ) ();
+                        cout<<"Sampling: "<<sucess<<endl;
+                        // if the move is valid
+                        if ( sucess ) {
+
+                                track_Start_Search();
+                                float current_config_prob = proposal_graph.Posterior();
+
+
+                                if ( MAP_prob == 0.0 ) {
                                         // accept the configuration since we dont have one to compare against
                                         MAP_estimate.clear();
-                                        MAP_prob = current_config_prob;
-
                                         for ( auto & n : proposal_graph.start_nodes ) {
+
                                                 TNode * trvs = n;
 
                                                 m.clear();
+                                                while ( trvs != 0 ) {
+                                                        // cout<<"#1.1 "<< trvs->active_out<<endl;
+                                                        m .push_back ( TNode ( trvs ) );
+                                                        //cout<<"#1.2 "<< trvs->active_out->target<<endl;
+                                                        if ( trvs->active_out == 0 ) {
+                                                                break;
+                                                        }
 
-                                                while ( trvs ) {
-
-                                                        m .push_back ( trvs );
                                                         trvs = trvs->active_out->target;
+
                                                 }
+                                                MAP_estimate.push_back ( m );
                                         }
-                                        MAP_estimate.push_back ( m );
                                         Accept_Proposal();
                                 } else {
+                                        //mcmc simulated annnealing with a constant temp value
+                                        if ( dis2 ( *gen ) < std::min ( 1.0f, ( current_config_prob/MAP_prob ) ) ) {
 
-                                        Reject_Proposal();
+                                                // accept the configuration since we dont have one to compare against
+                                                MAP_estimate.clear();
+                                                MAP_prob = current_config_prob;
+
+                                                for ( auto & n : proposal_graph.start_nodes ) {
+                                                        TNode * trvs = n;
+
+                                                        m.clear();
+
+                                                        while ( trvs != 0 ) {
+                                                                // cout<<"#1.1 "<< trvs->active_out<<endl;
+                                                                m .push_back ( TNode ( trvs ) );
+                                                                //cout<<"#1.2 "<< trvs->active_out->target<<endl;
+                                                                if ( trvs->active_out == 0 ) {
+                                                                        break;
+                                                                }
+
+                                                                trvs = trvs->active_out->target;
+
+                                                        }
+                                                        MAP_estimate.push_back ( m );
+                                                }
+                                                //MAP_estimate.push_back ( m );
+                                                Accept_Proposal();
+                                        } else {
+                                                cout<<"NO"<<endl;
+                                                Reject_Proposal();
+                                        }
                                 }
+
                         }
+
 
                 }
 
 
+
+
+
         }
 
-
-
-
-
-}
+        /* next step is to fix move and MAP */

@@ -2,6 +2,14 @@
 #define MCMCDA_H
 #include "Graph.h"
 
+
+
+const cv::Scalar SCALAR_BLACK = cv::Scalar(0.0, 0.0, 0.0);
+const cv::Scalar SCALAR_WHITE = cv::Scalar(255.0, 255.0, 255.0);
+const cv::Scalar SCALAR_YELLOW = cv::Scalar(0.0, 255.0, 255.0);
+const cv::Scalar SCALAR_GREEN = cv::Scalar(0.0, 200.0, 0.0);
+const cv::Scalar SCALAR_RED = cv::Scalar(0.0, 0.0, 255.0);
+
 class MCMCDA
 {
 public:
@@ -34,6 +42,10 @@ public:
     vector<tuple<TNode*,vector<Edge *>>> mergable_Vectors();
     vector<Edge * > Inactive_TNodes ( TNode *n );
     bool Is_Active ( TNode *n );
+    void track_Start_Search();
+    
+    //printing
+    void drawEntityPaths ( Mat &image );
     
 
     //proposal moves

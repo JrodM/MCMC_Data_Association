@@ -18,7 +18,7 @@ void Temporal_Entity_Tracking_Graph:: newTimeEvent()
 {
 
         Time_Frame earliest_window = sliding_window[0];
-	total_observations -= earliest_window.frame.size();
+        total_observations -= earliest_window.frame.size();
         sliding_window.pop_front();
 
         sliding_window.push_back ( blank );
@@ -78,7 +78,8 @@ void Temporal_Entity_Tracking_Graph:: newTimeEvent()
 
 void Temporal_Entity_Tracking_Graph::construct_Paths ( int max_eucldiean_distance , int max_missed_frames )
 {
-
+        // set all of the times up in the window frame
+        set_Time_Frames();
         // loop through each window and construct paths to potential nodes in t+maxmissedframes of time.
         //
         // NO LONGER FIRST WINDOW WE DO THIS FOR OUR PROPOSAL WINDOW SIZE
@@ -97,14 +98,19 @@ void Temporal_Entity_Tracking_Graph::construct_Paths ( int max_eucldiean_distanc
                                 for ( vector<TNode *>::iterator j = ( *start_propose ).frame.begin() ; j!= ( *start_propose ).frame.end(); j++ ) {
 
                                         // construct the paths if they are close enough
-                                        if ( pow ( pow ( (*j)->location.x-(*i)->location.x,2 ) + pow ( (*j)->location.y-(*i)->location.y,2 ),.5 ) < max_eucldiean_distance ) {
+                                        ///distance * max movement per frame stivk with euclidean fot now
+
+
+                                        //1/30 messages per second. migt need to adjust threshold.
+                                        if ( pow ( pow ( ( *j )->location.x- ( *i )->location.x,2 ) + pow ( ( *j )->location.y- ( *i )->location.y,2 ),.5 ) < distance * 20 ) {
                                                 //the i  is the source and jis the target.
                                                 Edge * new_edge = new Edge();
                                                 new_edge->source = *i;
                                                 new_edge->target  = *j;
                                                 new_edge->time_distance = distance;
-                                                (*i)->out_edges.push_back ( new_edge );
-                                                (*j)->in_edges.push_back ( new_edge );
+                                                ( *i )->out_edges.push_back ( new_edge );
+                                                ( *j )->in_edges.push_back ( new_edge );
+                                                cout<<"New Edge to: "<< new_edge->target->frame->time<< " From:" << new_edge->source->frame->time<<endl;
                                         }
 
                                 }
@@ -122,8 +128,7 @@ void Temporal_Entity_Tracking_Graph::construct_Paths ( int max_eucldiean_distanc
 
            }*/
 
-// set all of the times up in the window frame
-        set_Time_Frames();
+
 
 }
 
@@ -141,7 +146,7 @@ void Temporal_Entity_Tracking_Graph::set_Time_Frames()
 void Temporal_Entity_Tracking_Graph::add_Location ( int x, int y )
 {
         sliding_window[sliding_window.size()-1].frame.push_back ( new TNode ( x,y,&sliding_window[sliding_window.size()-1] ) );
-	total_observations++;
+        total_observations++;
 
 }
 
@@ -244,6 +249,7 @@ void Temporal_Entity_Tracking_Graph::graph_Stats ( int t,int & at, int & zt, int
 // Prior functions
 float Temporal_Entity_Tracking_Graph::Prior()
 {
+        cout<<"Calculating Prior"<<endl<<endl;
         float prob =0;
         int t =0;
         int at = 0;
@@ -263,13 +269,14 @@ float Temporal_Entity_Tracking_Graph::Prior()
                 prob+=at*log ( lambda_b );
                 prob+=ft*log ( lambda_f );
         }
-
+        cout<<"DONE calculating Prior"<<endl<<endl;
         return prob;
 }
 
 //posterior
 float Temporal_Entity_Tracking_Graph::Posterior()
 {
+        cout<<"Calculating Posterior"<<endl<<endl;
         return ( Prior() + track_likelihood.Probability ( start_nodes ) );
 }
 
