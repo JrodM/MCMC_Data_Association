@@ -105,7 +105,7 @@ public:
 	start_of_path =  n->start_of_path;
 	active_out = n->active_out;
 	frame = n->frame;
-	cout<<"Node spam"<<endl;
+	//cout<<"Node spam"<<endl;
       }
    /*  ~TNode()
      {s

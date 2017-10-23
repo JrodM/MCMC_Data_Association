@@ -22,12 +22,12 @@ float Likelihood::Probability ( vector<TNode *> & track_START )
                 // intialize kalman filter for each path
                 KF.init ( 4,2,0 );
                 KF.transitionMatrix = ( Mat_<float> ( 4, 4 ) << 1,0,1,0,   0,1,0,1,  0,0,1,0,  0,0,0,1 );
-                KF.controlMatrix = ( Mat_<float> ( 4, 2 ) << .5,0,   0,.5,  1,0,  0,1 );
+                KF.controlMatrix = ( Mat_<float> ( 4, 2 ) << .045,0,   0,.045,  .3,0,  0,.3 );
                 KF.measurementMatrix = ( Mat_<float> ( 2, 4 ) << 1,0,0,0 ,  0,1,0,0 );
                 setIdentity ( KF.processNoiseCov );
                 setIdentity ( KF.measurementNoiseCov );
-                KF.processNoiseCov =KF.processNoiseCov * 10;
-                KF.measurementNoiseCov = KF.measurementNoiseCov*5;
+                KF.processNoiseCov =KF.processNoiseCov * 7;
+                KF.measurementNoiseCov = KF.measurementNoiseCov*3;
 		
 		
 		// too lazy too add noise oh well.

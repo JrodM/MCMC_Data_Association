@@ -3,10 +3,10 @@
 #include "mcmc_types.h"
 #include "Likelihood.h"
 
-#define WINDOW_SIZE 80
+#define WINDOW_SIZE 150
 // proposal window size
 // this limits how much of the track is considered mutable
-#define PROPOSAL_WINDOW_SIZE 15
+#define PROPOSAL_WINDOW_SIZE 30
 // We currently have 30 frames per second
 
 typedef class Temporal_Entity_Tracking_Graph

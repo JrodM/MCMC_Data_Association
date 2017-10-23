@@ -20,7 +20,7 @@ public:
     float MAP_prob = 0.00;
 
     // may have to reconsider probability functions but this holds all unassigned nodes
-    vector<vector<TNode *>> noise;
+  //  vector<vector<TNode *>> noise;
 
     std::random_device rd;  //Will be used to obtain a seed for the random number engine
     std::mt19937 * gen;
@@ -43,6 +43,7 @@ public:
     vector<Edge * > Inactive_TNodes ( TNode *n );
     bool Is_Active ( TNode *n );
     void track_Start_Search();
+    void Load_Tracks(vector<vector<TNode>> & load_this);
     
     //printing
     void drawEntityPaths ( Mat &image );

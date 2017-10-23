@@ -102,7 +102,7 @@ void Temporal_Entity_Tracking_Graph::construct_Paths ( int max_eucldiean_distanc
 
 
                                         //1/30 messages per second. migt need to adjust threshold.
-                                        if ( pow ( pow ( ( *j )->location.x- ( *i )->location.x,2 ) + pow ( ( *j )->location.y- ( *i )->location.y,2 ),.5 ) < distance * 20 ) {
+                                        if ( pow ( pow ( ( *j )->location.x- ( *i )->location.x,2 ) + pow ( ( *j )->location.y- ( *i )->location.y,2 ),.5 ) < distance * 40 ) {
                                                 //the i  is the source and jis the target.
                                                 Edge * new_edge = new Edge();
                                                 new_edge->source = *i;
@@ -136,7 +136,8 @@ void Temporal_Entity_Tracking_Graph::set_Time_Frames()
 {
         int i = 0;
         for ( auto & f:sliding_window ) {
-                f.time = i++;
+                f.time = i;
+		i++;
 
         }
 }
