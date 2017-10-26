@@ -3,10 +3,10 @@
 #include "mcmc_types.h"
 #include "Likelihood.h"
 
-#define WINDOW_SIZE 150
+#define WINDOW_SIZE 80
 // proposal window size
 // this limits how much of the track is considered mutable
-#define PROPOSAL_WINDOW_SIZE 30
+#define PROPOSAL_WINDOW_SIZE 15
 // We currently have 30 frames per second
 
 typedef class Temporal_Entity_Tracking_Graph
@@ -55,7 +55,7 @@ public:
     //add current event/points to the current window
     void add_Location(int x, int y);
     //stats at time t. For more on the stats go to function
-    void graph_Stats( int t,int & at, int & zt, int & ct, int & dt, int & ut,int & ft );
+    void graph_Stats( int t,int & at, int & zt, int & ct, int & dt, int & ut,int & ft,int et_[WINDOW_SIZE]);
     // Prior functions
     float Prior();
     

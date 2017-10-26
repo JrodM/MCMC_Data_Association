@@ -38,15 +38,6 @@ void Temporal_Entity_Tracking_Graph:: newTimeEvent()
                         Edge * delete_edge = *j;
 
                         // if we have a start path node instantiate the next temporal node as the beginning
-                        // path start node.
-                        if ( delete_edge->active == true && time_event->start_of_path == true ) {
-                                // add to our
-                                vector_erase ( start_nodes,time_event );
-                                start_nodes.push_back ( delete_edge->target );
-                                delete_edge->target->start_of_path = true;
-
-                        }
-
 
 
                         // remove each of the  edges from the
@@ -102,7 +93,7 @@ void Temporal_Entity_Tracking_Graph::construct_Paths ( int max_eucldiean_distanc
 
 
                                         //1/30 messages per second. migt need to adjust threshold.
-                                        if ( pow ( pow ( ( *j )->location.x- ( *i )->location.x,2 ) + pow ( ( *j )->location.y- ( *i )->location.y,2 ),.5 ) < distance * 40 ) {
+                                        if ( pow ( pow ( ( *j )->location.x- ( *i )->location.x,2 ) + pow ( ( *j )->location.y- ( *i )->location.y,2 ),.5 ) < distance * 20 ) {
                                                 //the i  is the source and jis the target.
                                                 Edge * new_edge = new Edge();
                                                 new_edge->source = *i;
@@ -155,93 +146,81 @@ void Temporal_Entity_Tracking_Graph::add_Location ( int x, int y )
 
 
 //stats at time t
-void Temporal_Entity_Tracking_Graph::graph_Stats ( int t,int & at, int & zt, int & ct, int & dt, int & ut,int & ft )
+void Temporal_Entity_Tracking_Graph::graph_Stats ( int t,int & at, int & zt, int & ct, int & dt, int & ut,int & ft ,int et_[WINDOW_SIZE])
 {
         //et: number of targets from t-1
         //at: number of new targets at time t
         //zt: number of targets terminated at time t
         //ct: et-zt targets persisted
         //dt: number of detections at time T
-        //ut: et-zt+at-dt
+        //ut: et-zt+at-dt be the number of undetected targets
         //ft: nt-dt the number of false alarms
         // nt is the total points at t
-
+	  //dt detected targets
         zt = 0;
         // find targets that terminate
 
-        // num targets at t-1
+        // num targets at et
         int et = 0;
-
+        at = 0;
+        dt = 0;
+	
         if ( t ) { // if it isnt 0
-                for ( auto & node: sliding_window[t-1].frame ) {
-                        //if the track from time t doesn't have anothe active out node
-                        // then we know that it terminates
-                        if ( node->active_out !=0 ) {
-                                if ( node->active_out->target->active_out == 0 ) {
-                                        zt++;
-                                }
+	  
+	  et =et_[t-1];
 
-                                et++;
-
-                        } else {
-                                for ( auto & e: node->in_edges ) {
-
-                                        if ( e->active ) {
-                                                et++;
-                                                break;
-                                        }
-
-                                }
-
-                        }
-                }
         }
-
-        ct = et - zt;
+        
+        
 
         int nt = sliding_window[t].frame.size();
 
-        at = 0;
-
+	
         for ( auto & node: sliding_window[t].frame ) {
+	   bool detected = false;
+	   
                 if ( node->start_of_path == true ) {
+		  
                         at++;
+	
                 }
+                
+                if(!node->active_out)
+		{
+		  
+                for ( auto & e: node->in_edges ) {
+                        if ( e->active == true) {
+			
+				   zt++;
+				   dt++;
+				   break;
+				
+                               
+                        }
+                
+		}
+		  
+		}
+		else
+		{
+		  dt++;
+		}
+
+                // if we've gone through both the in and out edge lists
+                // without seeing an active edge false detection.
         }
 
 
-        dt = 0;
 
-        for ( auto & node: sliding_window[t].frame ) {
+
+       /* for ( auto & node: sliding_window[t].frame ) {
                 //if the track from time t doesn't have anothe active out node
                 // then we know that it terminates
-                bool detected = false;
-
-                for ( auto & e: node->in_edges ) {
-                        if ( e->active == true ) {
-                                detected = true;
-                                dt++;
-                                break;
-                        }
-                }
-
-                if ( !detected ) {
-
-                        for ( auto & e: node->out_edges ) {
-                                if ( e->active == true ) {
-                                        //detected = true;
-                                        dt++;
-                                        break;
-                                }
-                        }
-
-                }
-                // if we've gone through both the in and out edge lists
-                // without seeing an active edge false detection.
+                
 
 
-        }// end of dt and ft
-
+        }// end of dt and ft*/
+        ct = et - zt;
         ut  = et -zt + at - dt;
         ft = nt -dt;
 
@@ -260,8 +239,33 @@ float Temporal_Entity_Tracking_Graph::Prior()
         int  ut = 0;
         int  ft = 0;
 
+	int et[WINDOW_SIZE] = {0};
+	// find our et's
+	for(auto & nodex: start_nodes)
+	{
+	 //for each path lets figured 
+	  TNode * n = nodex;
+	  while(n->active_out)
+	  {
+	    int time = n->frame->time;
+	    int time_difference  = n->active_out->time_distance;
+	    
+	    while(time_difference-- > 1)
+	    {
+	      et[time + time_difference]++;
+	    }
+	      et[time]++;
+	     n = n->active_out->target; 
+	  }
+	  
+	    int time = n->frame->time;
+	    et[time]++;
+	     //n = n->active_out->target; 
+	  
+	}
+	
         for ( t = 0; t<sliding_window.size(); t++ ) {
-                graph_Stats ( t,at,zt,ct,dt,ut,ft );
+                graph_Stats ( t,at,zt,ct,dt,ut,ft ,et);
 
                 prob+= zt*log ( pz );
                 prob+=ct*log ( 1-pz );
@@ -277,7 +281,11 @@ float Temporal_Entity_Tracking_Graph::Prior()
 //posterior
 float Temporal_Entity_Tracking_Graph::Posterior()
 {
-        cout<<"Calculating Posterior"<<endl<<endl;
-        return ( Prior() + track_likelihood.Probability ( start_nodes ) );
+        cout<<endl<<"Calculating Posterior"<<endl;
+	float prior = Prior() ;
+	float likelihood = track_likelihood.Probability ( start_nodes )/10;
+	
+	cout<<"|Prior: "<< prior<<"|Likelihood: "<<likelihood<<"|"<<endl;
+        return (prior+ likelihood );
 }
 

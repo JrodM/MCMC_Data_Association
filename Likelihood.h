@@ -30,7 +30,7 @@ public:
   const float pi= 3.1415927;
   // returns the probablities of all the tracks
   float Probability(vector<TNode *> & track_START);
-  
+  int track_Length ( TNode * n );
   
 };
 

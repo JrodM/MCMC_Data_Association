@@ -54,14 +54,14 @@ void vector_erase ( vector<T *> & vec, T * erase_this )
 
 // keeps track of two points
  struct point {
-    u_int8_t x;
-    u_int8_t y;
+    int x;
+    int y;
 
     point() {
         x = 0;
         y = 0;
     }
-    point ( u_int8_t x1,u_int8_t y1 ) {
+    point ( int x1,int y1 ) {
         x= x1;
         y= y1;
     }

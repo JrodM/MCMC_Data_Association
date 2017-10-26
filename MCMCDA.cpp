@@ -48,7 +48,7 @@ void MCMCDA::track_Start_Search()
         for ( auto & fra : proposal_graph.sliding_window ) {
                 for ( auto & pt : fra.frame ) {
                         if ( pt->active_out ) {
-                                bool is_start = true;;
+                                bool is_start = true;
 
                                 for ( auto & x : pt->in_edges ) {
                                         if ( x->active ==true ) {
@@ -70,19 +70,25 @@ void MCMCDA::track_Start_Search()
 }
 
 void MCMCDA::drawEntityPaths ( Mat &image )
-{
-        cout<<"drawing Paths "<< MAP_estimate.size() <<endl;
+{	
+        cout<<endl<<"drawing Paths "<< MAP_estimate.size() <<endl;
 	if( MAP_estimate.size())
 	{
 	 cout<<MAP_estimate[0].size()<<endl;
 	}
-cvtColor(image, image, CV_GRAY2RGB);
+	
+    cvtColor(image, image, CV_GRAY2RGB);
+      int iter = 0;
+      
         for ( vector<vector<TNode>>::iterator i = MAP_estimate.begin(); i!= MAP_estimate.end(); i++ ) {
+	  cout<<endl<<"Iter: "<<iter<<"  "<<(*i).size()<<endl;;
                 for ( vector<TNode>::iterator j = ( *i ).begin(); j+1 != ( *i ).end(); j++ ) {
                         line ( image, Point ( ( *j ).location.x, ( *j ).location.y ), Point ( ( * ( j+1 ) ).location.x, ( * ( j+1 ) ).location.y ), SCALAR_GREEN, 2 );
-
+		
+			cout<<( *j ).location.x<<","<<( *j ).location.y<<": "<<( *j ).frame->time<<"===>";
+		  
                 }
-
+iter ++;
         }
 }
 //is the node active
@@ -99,7 +105,7 @@ bool MCMCDA::Is_Active ( TNode *n )
         if ( n->active_out != 0 ) {
                 return true;
         }
-cout<<"Return from is_active"<<endl;
+//cout<<"Return from is_active"<<eet_ndl;
         return false;
 
 }
@@ -131,7 +137,8 @@ void MCMCDA::Propose_Deactivate ( Edge * e )
                 vector_erase ( proposal_graph.start_nodes,e->source );
                 cout<<"destroyed the start track"<<endl<<proposal_graph.start_nodes.size() <<endl;
         }*/
-
+	// set to false since we reset every time we look for the node path for saving.
+	e->source->start_of_path = false;
         e->proposed = true;
         e->active = false;
         e->source->saved_out =  e->source->active_out;
@@ -178,7 +185,7 @@ vector<TNode*> MCMCDA::get_Tracks_At_T ( int t )
 {
 
         vector<TNode*> pts;
-cout<<"If u seeing this its not breaking at get tracks "<< t <<endl;
+//cout<<"If u seeing this its not breaking at get tracks "<< t <<endl;
         for ( auto & pt: proposal_graph.sliding_window[t].frame ) {
                 if ( Is_Active ( pt ) ) {
                         pts.push_back ( pt );
@@ -279,10 +286,10 @@ bool MCMCDA::Birth_Move()
         std::uniform_real_distribution<> dis2 ( 0,in_active.size()-1 );
 
         r = dis2 ( *gen );
-
+	cvWaitKey(100);
         if ( Extend ( in_active[r] ) ) {
 
-                in_active[r]->start_of_path = true;
+                //in_active[r]->start_of_path = true;
                 proposal_graph.start_nodes.push_back ( in_active[r] );
 
                 return true;
@@ -396,13 +403,14 @@ vector<TNode*> MCMCDA:: extendable_Tracks()
         //return
         vector<TNode*> r_this;
 
-        for ( auto & n: proposal_graph.start_nodes ) {
+	//had to get rid of the & because it was changing all of our pointers... DOI.....
+        for ( auto  n: proposal_graph.start_nodes ) {
                 while ( n->active_out ) {
                         n = n->active_out->target;
                 }
-
                 // this is cheapy because it still loops thru whole vector
                 vector<Edge *> m = Inactive_TNodes ( n );
+		cout<<"EXET ... "<< m.size()<<endl;
                 if ( m.size() >0 ) {
                         r_this.push_back ( n );
                 }
@@ -418,6 +426,7 @@ bool MCMCDA::Extension_Move()
         vector<TNode*> acceptable_tracks = extendable_Tracks();
 
         if ( acceptable_tracks.size() == 0 ) {
+	  cout<<"No exceptable Tracks."<<endl;
                 return false;
         }
 
@@ -527,7 +536,11 @@ bool MCMCDA::Switch ( TNode* t1, TNode * t2 )
         if ( t1_t2N ==0 || t2_t1N ==0 ) {
                 return false;
         }
+        
+        Propose_Deactivate(t1->active_out);
+	Propose_Deactivate(t2->active_out);
 
+        //if we don't deactive it destroys everything past the edge as well. Whoops....
         Propose_Activate ( t1_t2N );
         Propose_Activate ( t1_t2N );
         return true;
@@ -673,7 +686,7 @@ bool MCMCDA::Split_Move()
 
         }
 
-        n->start_of_path = true;
+      //  n->start_of_path = true;
         // temp->active_out= 0;
         temp->active_out->proposed = true;
         temp->active_out->active = false;
@@ -714,6 +727,7 @@ void MCMCDA::Reject_Proposal()
                         // if it destroys the track
 
                         e->source->active_out = e;
+			e->source->saved_out =0;
 
                 }
 
@@ -734,25 +748,38 @@ void MCMCDA::Load_Tracks(vector<vector<TNode>> & load_this)
                 for ( auto & n: proposal_graph.start_nodes ) {
 		  cout<<endl<<n->active_out<< endl;
                         erase = n->active_out;
+			if(erase)
+			{
                         while ( erase->target->active_out ) {
                                 Propose_Deactivate ( erase );
                                 erase = erase ->target->active_out;
+				
                         }
                         Propose_Deactivate ( erase );
-                }
+			}
+                        else
+			{
+			 n->start_of_path = false; 
+			}
+                        
+			}
+                
 
-
+		    Accept_Proposal();
                 /* Now reintialize based of the MAP estimate
 
                  Down low we need a case to update the MAP
                  */
-
+	    proposal_graph.start_nodes.clear();
                 for ( auto & track:load_this ) {
 
+		  	track[0].active_out->source->start_of_path = true;
+			proposal_graph.start_nodes.push_back(track[0].active_out->source);
+			
                         // for each pt propose
                         for ( auto & a_pt: track ) {
                                 TNode n = a_pt;
-
+				
                                 while ( n.active_out ) {
 				 Propose_Activate(n.active_out);
 				    n = n.active_out->target;
@@ -760,7 +787,7 @@ void MCMCDA::Load_Tracks(vector<vector<TNode>> & load_this)
                         }
 
                 }
-                
+               // cvWaitKey(200);
 	      Accept_Proposal();
   
 }
@@ -774,19 +801,19 @@ void MCMCDA::Sampler()
         // if theres no observations then we should assign a probabilty of zero.
         // another function that should be added in is if there arent any nodes we have to force a birth move.
 
-        track_Start_Search();
+       
 
         if ( proposal_graph.total_observations < 2 ) {
 
                 // previous_config.clear();
                 MAP_estimate.clear();
-                MAP_prob = 0;
+                MAP_prob = -100000;
                 //previous_prob = 0.0001f;
 
                 cout<<"NOTHING TO VIEW"<<endl;
                 return;
 
-        } else  if ( proposal_graph.start_nodes.size() == 0 ) {
+        } else  if ( MAP_estimate.size() == 0 ) {
 
                 for ( int i = 0 ; i < PROPOSAL_WINDOW_SIZE-1; i++ ) {
                         if ( Birth_Move() ) {
@@ -805,12 +832,10 @@ void MCMCDA::Sampler()
                 }
 
 
-                // previous_config.clear();
-                MAP_estimate.clear();
-
+		track_Start_Search();
                previous_prob = MAP_prob = proposal_graph.Posterior();
 
-                track_Start_Search();
+                
 
                 for ( auto & n : proposal_graph.start_nodes ) {
                         TNode * trvs = n;
@@ -834,18 +859,24 @@ void MCMCDA::Sampler()
                         previous_config.push_back ( m );
                 }
 
-                //MAP_estimate = previous_config;
+                MAP_estimate = previous_config;
                 Accept_Proposal();
                 cout<<"#3"<<endl;
         } else {
 
                 // this is loading the previous optimal state as well as the memory / immutable part of the graph
                 previous_config = MAP_estimate;
-               previous_prob = MAP_prob;
+              
+	        track_Start_Search();
 		Load_Tracks(MAP_estimate);
+		// load track does track start search.
+		previous_prob= MAP_prob = proposal_graph.Posterior();
+	//	MAP_estimate.clear();
+		//MAP_prob = -10000;
                 
         }
 
+        
         /*else if
         *
         * Load initial state as MAP if there is one.
@@ -858,9 +889,9 @@ void MCMCDA::Sampler()
         */
 
         std::uniform_real_distribution<> dis ( 0, proposal_list.size()-1 );
-        std::uniform_real_distribution<> dis2 ( 0.0, 1.0 );
+        std::uniform_real_distribution<> dis2 ( 0.000f, 1.0001f );
         // at the end of our loop we have to set W to the max configurations
-        for ( int i = 0 ; i < 5000; i++ ) {
+        for ( int i = 0 ; i < 100; i++ ) {
 
                 track_Start_Search();
 
@@ -871,14 +902,20 @@ void MCMCDA::Sampler()
                 cout<<"Sampling: "<<sucess<<endl;
                 // if the move is valid
                 if ( sucess ) {
-
+			
                         track_Start_Search();
                         float current_config_prob = proposal_graph.Posterior();
-
+			
+			float exp_prob = exp(current_config_prob-previous_prob);
+			
+			cout<<MAP_prob<<" and "<<exp_prob<<endl;
 			
 			// check to see if we have a better MAP_prob
-			if(current_config_prob > MAP_prob)
+			// this is fine since -31 (worse) < -3 (better)s
+			if(exp_prob>1)
 			{
+			  
+			 MAP_estimate.clear();
 			  for ( auto & n : proposal_graph.start_nodes ) {
                                                TNode * trvs = n;
 
@@ -899,8 +936,15 @@ void MCMCDA::Sampler()
                                         }
                                         MAP_prob = current_config_prob;
 			}
+			                                // worse probabilities stem from large negative numbers so that why we had to flip
+                                // else we would constantly be accepting bad moves.
+                                // This means the bottom number has to be smaller the top to get accepted
+                                // might need to watch out for 0. <==== this is incorrect because the data is unregulized without P(Y)
+                                //further more we have to subtract because log().
                                 //mcmc simulated annnealing with a constant temp value
-                                if ( dis2 ( *gen ) < std::min ( 1.0f, ( current_config_prob/previous_prob ) ) ) {
+                                
+                                // take the log of the whole equation.
+                                if ( dis2 ( *gen ) < std::min ( 1.0f,exp_prob) )  {
 
                                         // accept the configuration since we dont have one to compare against
                                      //  previous_config.clear();
@@ -938,7 +982,7 @@ for(auto & tracks:MAP_estimate)
     }
   }
   
-  if(m.size())
+  if(m.size()>1)
   {
   save_MAP.push_back(m);
   }
@@ -949,4 +993,5 @@ for(auto & tracks:MAP_estimate)
 }
 
 /* next step is to fix move and MAP */
-
+// found a log problem. IF the larger number is on top its actually less likely explaining strange behaviors. 
+// sooo we want
